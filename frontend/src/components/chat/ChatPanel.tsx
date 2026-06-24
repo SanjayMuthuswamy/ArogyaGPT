@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSpeech } from '../../hooks/useSpeech'
+import { useSpeechRecognition } from '../../hooks/useSpeechRecognition'
 
 interface Message {
   id: number
@@ -31,6 +33,30 @@ export default function ChatPanel() {
   const [suggested, setSuggested] = useState(SUGGESTED)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const { speak, pause, resume, isSpeaking, isPaused } = useSpeech()
+  const { startListening, stopListening, isListening, transcript, setTranscript } = useSpeechRecognition('English')
+  
+  const [speakingId, setSpeakingId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!isSpeaking) setSpeakingId(null)
+  }, [isSpeaking])
+
+  const handleListenBubble = (id: number, text: string) => {
+    if (speakingId === id && isSpeaking && !isPaused) {
+      pause()
+    } else if (speakingId === id && isPaused) {
+      resume()
+    } else {
+      speak(text, 'English')
+      setSpeakingId(id)
+    }
+  }
+
+  useEffect(() => {
+    if (transcript) setInput(transcript)
+  }, [transcript])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -66,8 +92,6 @@ export default function ChatPanel() {
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   }
-
-  const [isMicActive, setIsMicActive] = useState(false)
 
   return (
     <div className="flex flex-col h-full">
@@ -131,18 +155,29 @@ export default function ChatPanel() {
                 </div>
                 <div className="flex items-center gap-3 mt-2 pl-1">
                   <button
-                    className="flex items-center gap-1.5 font-body text-sm text-text-muted
-                                hover:text-brand-primary transition-colors duration-fast"
-                    aria-label="Listen to this response"
+                    onClick={() => handleListenBubble(msg.id, msg.text)}
+                    className={`flex items-center gap-1.5 font-body text-[12px] px-2.5 py-1 rounded-lg border transition-colors duration-fast
+                      ${speakingId === msg.id && isSpeaking && !isPaused
+                        ? 'bg-[rgba(46,125,107,0.14)] border-[rgba(126,207,194,0.30)] text-brand-glow'
+                        : 'bg-[rgba(46,125,107,0.06)] border-[rgba(126,207,194,0.10)] text-text-muted hover:border-[rgba(126,207,194,0.3)] hover:bg-[rgba(46,125,107,0.10)]'
+                      }`}
+                    aria-label={speakingId === msg.id && isSpeaking && !isPaused ? "Pause" : "Listen"}
                   >
-                    <svg className="w-3.5 h-3.5" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                      <path d="M3 5 H5 L8 2 V14 L5 11 H3 C2 11 1 10 1 9 V7 C1 6 2 5 3 5Z"
-                            stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-                      <path d="M11 5 C12.5 6 13 7 13 8 C13 9 12.5 10 11 11"
-                            stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                    </svg>
-                    Listen
+                    {speakingId === msg.id && isSpeaking && !isPaused ? (
+                      <svg className="w-[13px] h-[13px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="10" y1="15" x2="10" y2="9"></line>
+                        <line x1="14" y1="15" x2="14" y2="9"></line>
+                      </svg>
+                    ) : (
+                      <svg className="w-[13px] h-[13px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                        <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+                        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+                      </svg>
+                    )}
+                    {speakingId === msg.id && isSpeaking && !isPaused ? 'Pause' : 'Listen'}
                   </button>
+
                   {msg.lang && (
                     <span className="font-body text-xs text-text-muted/70">
                       Answered in {msg.lang}
@@ -177,6 +212,11 @@ export default function ChatPanel() {
         )}
 
         <div ref={bottomRef} />
+      </div>{/* end message area */}
+
+      {/* Screen reader announcement */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {isListening ? 'Listening for voice input' : ''}
       </div>
 
       {/* Input bar */}
@@ -188,28 +228,30 @@ export default function ChatPanel() {
             value={input}
             onChange={e => { setInput(e.target.value); autoResize() }}
             onKeyDown={handleKey}
-            placeholder="Ask anything about your report..."
-            className="flex-1 bg-transparent font-body text-base text-text-primary
-                       placeholder-text-muted resize-none outline-none
-                       min-h-[48px] max-h-[120px] py-2.5 px-2 leading-[1.5]"
+            placeholder={isListening ? "Listening... speak in English" : "Ask anything about your report..."}
+            className={`flex-1 bg-transparent font-body text-base resize-none outline-none min-h-[48px] max-h-[120px] py-2.5 px-2 leading-[1.5] ${isListening ? 'text-brand-glow italic' : 'text-text-primary placeholder-text-muted'}`}
             aria-label="Type your question"
             rows={1}
           />
           {/* Mic button */}
-          <button
-            onClick={() => setIsMicActive(p => !p)}
-            className={`w-10 h-10 rounded-md flex items-center justify-center flex-shrink-0
-                         transition-colors duration-fast min-h-[44px] min-w-[44px]
-                         ${isMicActive ? 'text-brand-primary bg-brand-glow/15' : 'text-text-muted hover:text-brand-primary'}`}
-            aria-label={isMicActive ? 'Stop voice input' : 'Start voice input'}
-            aria-pressed={isMicActive}
-          >
-            <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-              <rect x="7" y="2" width="6" height="10" rx="3" stroke="currentColor" strokeWidth="1.4" />
-              <path d="M4 10 C4 14 16 14 16 10" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-              <path d="M10 14 V18" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
-            </svg>
-          </button>
+          <div className="relative flex items-center justify-center">
+            <button
+              onClick={isListening ? stopListening : startListening}
+              className={`w-[40px] h-[40px] rounded-[10px] flex items-center justify-center flex-shrink-0 transition-colors duration-fast relative z-10
+                           ${isListening 
+                             ? 'bg-[rgba(212,102,90,0.12)] border border-[rgba(212,102,90,0.3)] text-[#D4665A]' 
+                             : 'bg-transparent border-none text-text-muted hover:text-brand-primary'}`}
+              aria-label={isListening ? 'Stop recording' : 'Use voice input'}
+              aria-pressed={isListening}
+            >
+              <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
+              </svg>
+            </button>
+            {isListening && <div className="absolute inset-0 pulse-ring-wrapper pointer-events-none rounded-full" aria-hidden="true"></div>}
+          </div>
           {/* Send button */}
           <button
             onClick={() => sendMessage(input)}
