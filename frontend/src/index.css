@@ -1,3 +1,130 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-base:         #F5F2EE;
+    --bg-surface:      #FDFCFA;
+    --bg-deep:         #1C2B2D;
+    --brand-primary:   #2E7D6B;
+    --brand-secondary: #4AA896;
+    --brand-glow:      #7ECFC2;
+    --accent-gold:     #C8A96E;
+    --accent-amber:    #E8C87A;
+    --text-primary:    #1A2420;
+    --text-secondary:  #4A5E59;
+    --text-muted:      #8FA49E;
+    --text-inverse:    #F5F2EE;
+    --status-normal:   #3A9E6E;
+    --status-warning:  #D4924A;
+    --status-critical: #C0574A;
+    --status-info:     #5A8FA8;
+    --border-soft:     rgba(46, 125, 107, 0.12);
+    --shadow-card:     0 2px 24px rgba(28, 43, 45, 0.06);
+    --shadow-elevated: 0 8px 40px rgba(28, 43, 45, 0.10);
+    --font-size-base:  1rem;
+  }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-size: var(--font-size-base);
+    scroll-behavior: smooth;
+  }
+
+  /* Accessibility focus styles */
+  *:focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  /* Shimmer skeleton effect */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(46, 125, 107, 0.04) 25%,
+      rgba(126, 207, 194, 0.12) 50%,
+      rgba(46, 125, 107, 0.04) 75%
+    );
+    background-size: 400px 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+  }
+
+  /* Brand glow upload border */
+  .upload-glow {
+    box-shadow: 0 0 0 4px rgba(126, 207, 194, 0.2);
+  }
+
+  /* Frosted glass nav */
+  .nav-glass {
+    background-color: rgba(28, 43, 45, 0.88);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  /* Card hover lift */
+  .card-hover {
+    transition: transform 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                box-shadow 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 40px rgba(28, 43, 45, 0.10);
+  }
+
+  /* Status badge */
+  .badge-normal   { background: rgba(58, 158, 110, 0.1);  color: #3A9E6E; }
+  .badge-warning  { background: rgba(212, 146, 74, 0.1);  color: #D4924A; }
+  .badge-critical { background: rgba(192, 87, 74, 0.1);   color: #C0574A; }
+
+  /* Critical row */
+  .row-critical {
+    border-left: 3px solid #C0574A;
+    background: rgba(192, 87, 74, 0.03);
+  }
+
+  /* Language chip */
+  .lang-chip {
+    transition: background-color 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                color 280ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .font-display { font-family: 'Fraunces', Georgia, serif; }
+  .font-body    { font-family: 'DM Sans', system-ui, sans-serif; }
+  .font-mono    { font-family: 'JetBrains Mono', Menlo, monospace; }
+
+  /* Font size scale accessibility */
+  .fs-normal .text-base { font-size: 1rem; }
+  .fs-large  .text-base { font-size: 1.125rem; }
+  .fs-xl     .text-base { font-size: 1.25rem; }
+
+  /* Scrollbar styling */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--brand-glow) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar       { width: 4px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: var(--brand-glow);
+    border-radius: 99px;
+  }
+}
