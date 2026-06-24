@@ -1,0 +1,27 @@
+version: '3.8'
+services:
+  fastapi:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - postgres
+      - redis
+  react:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: medease
+    ports:
+      - "5432:5432"
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
