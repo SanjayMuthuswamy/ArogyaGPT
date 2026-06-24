@@ -1,4 +1,4 @@
-# MedEase AI
+# ArogyaGPT
 
 Multilingual Medical Report Simplification and Intelligent Health Assistant.
 

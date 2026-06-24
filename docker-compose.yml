@@ -18,7 +18,7 @@ services:
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: medease
+      POSTGRES_DB: arogyagpt
     ports:
       - "5432:5432"
   redis:

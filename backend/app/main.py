@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.routes import reports
 
-app = FastAPI(title="MedEase AI", version="1.0.0")
+app = FastAPI(title="ArogyaGPT", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,4 +16,4 @@ app.include_router(reports.router, prefix="/api/v1/reports", tags=["reports"])
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to MedEase AI API"}
+    return {"message": "Welcome to ArogyaGPT API"}
