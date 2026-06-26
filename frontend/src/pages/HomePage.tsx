@@ -4,10 +4,10 @@ import LanguageSection from '../components/dashboard/LanguageSection'
 import Footer from '../components/layout/Footer'
 
 interface HomePageProps {
-  onNavigate: (page: 'home' | 'upload' | 'report') => void
+  onNavigate: (page: 'home' | 'upload' | 'report' | 'signin' | 'signup') => void
 }
 
-export default function HomePage({ onNavigate }: HomePageProps) {
+function HomePage({ onNavigate }: HomePageProps) {
   return (
     <div className="flex flex-col">
       <Hero onNavigate={onNavigate} />
@@ -17,3 +17,6 @@ export default function HomePage({ onNavigate }: HomePageProps) {
     </div>
   )
 }
+
+export { HomePage }
+export default HomePage

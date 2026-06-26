@@ -51,11 +51,11 @@ const steps = [
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="bg-[#FDFCFA] py-24 md:py-32" aria-labelledby="how-it-works-heading">
-      <div className="mx-auto max-w-7xl px-6 md:px-12 lg:px-16">
-        <div className="mb-16 text-center md:mb-20">
+    <section id="how-it-works" className="bg-[#FDFCFA] py-16 sm:py-20 md:py-24" aria-labelledby="how-it-works-heading">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-12 lg:px-16">
+        <div className="mb-10 text-center sm:mb-14 md:mb-16">
           <p className="mb-4 font-body text-sm uppercase tracking-[0.16em] text-[#8FA49E]">The Process</p>
-          <h2 id="how-it-works-heading" className="font-display text-2xl font-semibold tracking-[-0.02em] text-[#18322D] md:text-3xl">
+          <h2 id="how-it-works-heading" className="font-display text-xl font-semibold tracking-[-0.02em] text-[#18322D] sm:text-2xl md:text-3xl">
             From Complex to Clear — <span className="text-[#1D9E75]">in 4 Steps</span>
           </h2>
         </div>
@@ -65,7 +65,7 @@ export default function HowItWorks() {
             <path d="M0 1 C180 1, 320 1, 500 1 S820 1, 1000 1" fill="none" stroke="#88D9C4" strokeWidth="2" strokeLinecap="round" className="connector-path" />
           </svg>
 
-          <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
             {steps.map((step, index) => (
               <div key={step.number} className="step-card scroll-reveal relative flex flex-col items-center text-center" style={{ animationDelay: `${index * 90}ms` }}>
                 <div className="relative mb-6 flex h-24 w-24 items-center justify-center rounded-full p-[2px] shadow-[0_16px_34px_rgba(29,158,117,0.16)]" style={{ background: 'conic-gradient(from 180deg, #1D9E75 0deg, #7FD5BF 180deg, #1D9E75 360deg)' }}>
