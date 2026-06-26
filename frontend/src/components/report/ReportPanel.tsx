@@ -275,7 +275,6 @@ export default function ReportPanel() {
             </div>
           </div>
         )}
-
         {/* TAB 3: Health Insights */}
         {activeTab === 'insights' && (
           <div id="tabpanel-insights" role="tabpanel" aria-label="Health insights" className="space-y-4">
