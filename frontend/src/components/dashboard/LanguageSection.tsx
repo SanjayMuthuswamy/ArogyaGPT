@@ -11,10 +11,10 @@ export default function LanguageSection() {
   return (
     <section
       id="languages"
-      className="bg-bg-base py-24 md:py-32"
+      className="bg-bg-base py-16 sm:py-20 md:py-24"
       aria-labelledby="languages-heading"
     >
-      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-16 text-center">
+      <div className="mx-auto max-w-7xl px-4 text-center sm:px-6 md:px-12 lg:px-16">
 
         {/* Label */}
         <p className="font-body text-sm uppercase tracking-[0.12em] text-text-muted mb-4">
@@ -23,7 +23,7 @@ export default function LanguageSection() {
 
         {/* Language specimens */}
         <div
-          className="flex flex-wrap justify-center gap-x-8 gap-y-4 mb-10"
+          className="mb-8 flex flex-wrap justify-center gap-x-6 gap-y-3 sm:mb-10 sm:gap-x-8 sm:gap-y-4"
           role="list"
           aria-label="Supported languages"
         >
@@ -49,8 +49,7 @@ export default function LanguageSection() {
         {/* Tagline */}
         <p
           id="languages-heading"
-          className="font-display text-xl md:text-2xl font-medium text-text-secondary
-                     tracking-[-0.01em] italic"
+          className="font-display text-lg font-medium tracking-[-0.01em] text-text-secondary italic sm:text-xl md:text-2xl"
         >
           ArogyaGPT speaks your mother tongue.
         </p>

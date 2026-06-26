@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 
+type Page = 'home' | 'upload' | 'report' | 'signin' | 'signup'
+
 interface NavbarProps {
-  onNavigate: (page: 'home' | 'upload' | 'report') => void
+  onNavigate: (page: Page) => void
   currentPage: string
   fontSize: 'normal' | 'large' | 'xl'
   onFontSizeChange: (size: 'normal' | 'large' | 'xl') => void
@@ -17,7 +19,7 @@ export default function Navbar({ onNavigate, currentPage, fontSize, onFontSizeCh
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const handleNavigate = (page: 'home' | 'upload' | 'report', hash?: string) => {
+  const handleNavigate = (page: Page, hash?: string) => {
     onNavigate(page)
     setMobileOpen(false)
     if (hash) {
@@ -85,24 +87,32 @@ export default function Navbar({ onNavigate, currentPage, fontSize, onFontSizeCh
               ))}
             </div>
 
-            <button className="hidden rounded-full border border-[#DCEBE6] bg-white/80 p-2 text-[#4A5E59] transition hover:text-[#18322D] md:flex" aria-label="Notifications">
-              <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                <path d="M10 3.5 A2.5 2.5 0 0 0 7.5 6V8.5L6.2 10.8A1 1 0 0 0 7 13H13A1 1 0 0 0 13.8 10.8L12.5 8.5V6A2.5 2.5 0 0 0 10 3.5Z" stroke="currentColor" strokeWidth="1.2" />
-                <path d="M8 13.5C8.2 14.7 9 15.5 10 15.5C11 15.5 11.8 14.7 12 13.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-              </svg>
-            </button>
+            {currentPage !== 'home' && currentPage !== 'signin' && currentPage !== 'signup' ? (
+              <>
+                <button className="hidden rounded-full border border-[#DCEBE6] bg-white/80 p-2 text-[#4A5E59] transition hover:text-[#18322D] md:flex" aria-label="Notifications">
+                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                    <path d="M10 3.5 A2.5 2.5 0 0 0 7.5 6V8.5L6.2 10.8A1 1 0 0 0 7 13H13A1 1 0 0 0 13.8 10.8L12.5 8.5V6A2.5 2.5 0 0 0 10 3.5Z" stroke="currentColor" strokeWidth="1.2" />
+                    <path d="M8 13.5C8.2 14.7 9 15.5 10 15.5C11 15.5 11.8 14.7 12 13.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+                  </svg>
+                </button>
 
-            <button className="hidden h-9 w-9 items-center justify-center rounded-full bg-[#18322D] text-sm font-semibold text-white shadow-[0_10px_24px_rgba(24,50,45,0.18)] md:flex" aria-label="User profile">
-              R
-            </button>
+                <button
+                  onClick={() => handleNavigate('upload')}
+                  className="btn-shimmer hidden rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(29,158,117,0.24)] transition-transform duration-200 hover:scale-[1.01] md:inline-flex md:items-center md:gap-2"
+                  aria-label="Upload your medical report"
+                >
+                  Upload Report
+                  <span aria-hidden="true">→</span>
+                </button>
+              </>
+            ) : null}
 
             <button
-              onClick={() => handleNavigate('upload')}
-              className="btn-shimmer hidden rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(29,158,117,0.24)] transition-transform duration-200 hover:scale-[1.01] md:inline-flex md:items-center md:gap-2"
-              aria-label="Upload your medical report"
+              onClick={() => handleNavigate('signin')}
+              className="hidden rounded-full border border-[#DCEBE6] bg-white/80 px-4 py-2 text-sm font-semibold text-[#18322D] transition hover:border-[#1D9E75]/40 hover:text-[#1D9E75] md:inline-flex"
+              aria-label="Sign in"
             >
-              Upload Report
-              <span aria-hidden="true">→</span>
+              {currentPage === 'signin' ? 'Home' : 'Sign in'}
             </button>
 
             <button
@@ -140,9 +150,16 @@ export default function Navbar({ onNavigate, currentPage, fontSize, onFontSizeCh
                   {item.label}
                 </button>
               ))}
-              <button onClick={() => handleNavigate('upload')} className="mt-2 rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-4 py-3 font-semibold text-white">
-                Upload Your Report
-              </button>
+              <div className="mt-2 flex flex-col gap-3">
+                <button onClick={() => handleNavigate('signin')} className="rounded-full border border-[#DCEBE6] bg-white px-4 py-3 font-semibold text-[#18322D]">
+                  Sign in
+                </button>
+                {currentPage !== 'home' && currentPage !== 'signin' && currentPage !== 'signup' ? (
+                  <button onClick={() => handleNavigate('upload')} className="rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-4 py-3 font-semibold text-white">
+                    Upload Your Report
+                  </button>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>

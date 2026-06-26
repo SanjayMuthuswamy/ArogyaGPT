@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     SPACY_MODEL: str = "en_core_web_sm"
     HUGGINGFACE_MODEL: str = "all-MiniLM-L6-v2"
     TTS_PROVIDER: str = "gtts"
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
     
     model_config = SettingsConfigDict(env_file=".env")
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 interface HeroProps {
-  onNavigate: (page: 'home' | 'upload' | 'report') => void
+  onNavigate: (page: 'home' | 'upload' | 'report' | 'signin' | 'signup') => void
 }
 
 const languageChips = [
@@ -23,7 +23,7 @@ export default function Hero({ onNavigate }: HeroProps) {
   }, [])
 
   return (
-    <section className="relative flex min-h-screen items-center overflow-hidden bg-[#FAFAF8] pt-16" aria-label="Hero section">
+    <section className="relative flex min-h-[min(100vh,860px)] items-center overflow-hidden bg-[#FAFAF8] pt-16 sm:min-h-[92vh]" aria-label="Hero section">
       <div
         className="absolute inset-0"
         aria-hidden="true"
@@ -34,14 +34,14 @@ export default function Hero({ onNavigate }: HeroProps) {
         }}
       />
 
-      <div className="relative mx-auto w-full max-w-7xl px-6 py-20 md:px-12 lg:px-16">
-        <div className="grid items-center gap-12 lg:grid-cols-5 lg:gap-16">
+      <div className="relative mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 sm:py-14 md:px-12 lg:px-16 lg:py-16">
+        <div className="grid items-center gap-8 lg:grid-cols-5 lg:gap-16">
           <div ref={heroRef} className="lg:col-span-3">
-            <p className="mb-6 font-body text-sm uppercase tracking-[0.16em] text-[#4A5E59]">
+            <p className="mb-4 font-body text-sm uppercase tracking-[0.16em] text-[#4A5E59] sm:mb-6">
               Your Health. Your Language. Your Understanding.
             </p>
 
-            <h1 className="mb-6 max-w-[700px] font-display text-4xl font-light leading-[1.08] tracking-[-0.02em] text-[#18322D] text-balance" style={{ fontSize: 'clamp(2.3rem, 5vw, 3.7rem)' }}>
+            <h1 className="mb-4 max-w-[700px] font-display text-3xl font-light leading-[1.08] tracking-[-0.02em] text-[#18322D] text-balance sm:mb-6 sm:text-4xl" style={{ fontSize: 'clamp(2.1rem, 4.5vw, 3.7rem)' }}>
               Understand Your<br />
               Medical Report,<br />
               <span className="bg-gradient-to-r from-[#1D9E75] to-[#0F766E] bg-clip-text font-medium text-transparent">
@@ -49,24 +49,24 @@ export default function Hero({ onNavigate }: HeroProps) {
               </span>
             </h1>
 
-            <p className="mb-10 max-w-[500px] font-body text-[1.05rem] leading-[1.8] text-[#4A5E59]">
+            <p className="mb-6 max-w-[500px] font-body text-[0.96rem] leading-[1.7] text-[#4A5E59] sm:mb-8 sm:text-[1.02rem]">
               Upload any medical report — we simplify every term, highlight what matters, and explain it in the language you grew up speaking.
             </p>
 
-            <div className="mb-10 flex flex-wrap items-center gap-4">
+            <div className="mb-6 flex flex-wrap items-center gap-3 sm:mb-8 sm:gap-4">
               <button
                 onClick={() => onNavigate('upload')}
-                className="btn-shimmer min-h-[56px] rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-8 py-[16px] font-body text-base font-semibold text-white shadow-[0_16px_40px_rgba(29,158,117,0.24)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(29,158,117,0.28)]"
+                className="btn-shimmer min-h-[50px] rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-6 py-[13px] font-body text-sm font-semibold text-white shadow-[0_16px_40px_rgba(29,158,117,0.24)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(29,158,117,0.28)] sm:min-h-[56px] sm:px-8 sm:py-[16px] sm:text-base"
                 aria-label="Upload your medical report now"
               >
                 Upload Your Report Now
               </button>
               <button
-                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-                className="min-h-[56px] rounded-full border border-[#CFE9E0] bg-white/70 px-8 py-[16px] font-body text-base font-medium text-[#1D9E75] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#1D9E75]/40 hover:bg-[#F3FCF8]"
-                aria-label="See how ArogyaGPT works"
+                onClick={() => onNavigate('signup')}
+                className="min-h-[50px] rounded-full border border-[#CFE9E0] bg-white/70 px-6 py-[13px] font-body text-sm font-medium text-[#1D9E75] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#1D9E75]/40 hover:bg-[#F3FCF8] sm:min-h-[56px] sm:px-8 sm:py-[16px] sm:text-base"
+                aria-label="Create an account"
               >
-                See How It Works
+                Create Account
               </button>
             </div>
 

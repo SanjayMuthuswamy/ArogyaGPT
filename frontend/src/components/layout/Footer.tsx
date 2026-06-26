@@ -1,5 +1,5 @@
 interface FooterProps {
-  onNavigate: (page: 'home' | 'upload' | 'report') => void
+  onNavigate: (page: 'home' | 'upload' | 'report' | 'signin' | 'signup') => void
 }
 
 export default function Footer({ onNavigate }: FooterProps) {
