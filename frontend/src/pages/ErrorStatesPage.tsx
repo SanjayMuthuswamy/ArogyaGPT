@@ -9,7 +9,7 @@ const errors = [
   ['Network Error', 'Connection dropped while fetching AI insights. Your draft is saved locally.'],
   ['Unsupported Report', 'This file format is not supported. Upload PDF, JPG, PNG, or scan again.'],
   ['OCR Failed', 'The text could not be extracted clearly. Try a brighter image or a sharper scan.'],
-  ['Session Expired', 'Please sign in again to continue processing securely.'],
+  ['Session Reset', 'Please re-upload your report file to continue processing securely.'],
 ]
 
 export default function ErrorStatesPage({ onNavigate }: ErrorStatesPageProps) {

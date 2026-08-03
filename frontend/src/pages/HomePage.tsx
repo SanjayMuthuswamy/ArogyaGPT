@@ -1,22 +1,21 @@
 import Hero from '../components/dashboard/Hero'
+import FeaturesSection from '../components/landing/FeaturesSection'
 import HowItWorks from '../components/dashboard/HowItWorks'
-import LanguageSection from '../components/dashboard/LanguageSection'
-import Footer from '../components/layout/Footer'
+import TestimonialsSection from '../components/landing/TestimonialsSection'
+import FAQSection from '../components/landing/FAQSection'
 
 interface HomePageProps {
-  onNavigate: (page: 'home' | 'upload' | 'report' | 'signin' | 'signup') => void
+  onNavigate: (page: string) => void
 }
 
-function HomePage({ onNavigate }: HomePageProps) {
+export default function HomePage({ onNavigate }: HomePageProps) {
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col min-h-screen bg-[#FAFAF8]">
       <Hero onNavigate={onNavigate} />
+      <FeaturesSection onNavigate={onNavigate} />
       <HowItWorks />
-      <LanguageSection />
-      <Footer onNavigate={onNavigate} />
+      <TestimonialsSection />
+      <FAQSection />
     </div>
   )
 }
-
-export { HomePage }
-export default HomePage

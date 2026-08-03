@@ -1,96 +1,186 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import Navbar from './components/layout/Navbar'
 import HomePage from './pages/HomePage'
-import UploadPage from './pages/UploadPage'
-import ReportViewPage from './pages/ReportViewPage'
-import SignInPage from './pages/SignInPage'
-import SignUpPage from './pages/SignUpPage'
 import DashboardPage from './pages/DashboardPage'
-import UploadReportPage from './pages/UploadReportPage'
-import ProcessingPage from './pages/ProcessingPage'
-import ReportSummaryPage from './pages/ReportSummaryPage'
+import UploadPage from './pages/UploadPage'
 import ChatPage from './pages/ChatPage'
+import MedicalLibraryPage from './pages/MedicalLibraryPage'
 import HistoryPage from './pages/HistoryPage'
+
 import ProfilePage from './pages/ProfilePage'
-import ForgotPasswordPage from './pages/ForgotPasswordPage'
-import TestValuesPage from './pages/TestValuesPage'
-import ValueDetailPage from './pages/ValueDetailPage'
-import VoiceSummaryPage from './pages/VoiceSummaryPage'
-import TranslationPage from './pages/TranslationPage'
-import ExportPage from './pages/ExportPage'
-import SettingsPage from './pages/SettingsPage'
-import ErrorStatesPage from './pages/ErrorStatesPage'
+import AuthPage from './pages/AuthPage'
 
-type Page =
-  | 'home'
-  | 'upload'
-  | 'report'
-  | 'signin'
-  | 'signup'
-  | 'forgot-password'
-  | 'dashboard'
-  | 'upload-report'
-  | 'processing'
-  | 'summary'
-  | 'test-values'
-  | 'value-detail'
-  | 'chat'
-  | 'voice'
-  | 'translation'
-  | 'history'
-  | 'export'
-  | 'profile'
-  | 'settings'
-  | 'errors'
+// Protected page paths
+const PROTECTED_PATHS = [
+  '/dashboard',
+  '/upload',
+  '/chat',
+  '/library',
+  '/history',
 
-type FontSize = 'normal' | 'large' | 'xl'
+  '/profile'
+]
 
-const fontSizeMap: Record<FontSize, string> = {
-  normal: '16px',
-  large: '18px',
-  xl: '20px',
-}
+function AppContent() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
 
-export default function App() {
-  const [page, setPage] = useState<Page>('home')
-  const [fontSize, setFontSize] = useState<FontSize>('normal')
+  // Route Guarding: check route changes and auth state
+  useEffect(() => {
+    const isProtected = PROTECTED_PATHS.includes(location.pathname)
+    if (isProtected && !isLoggedIn) {
+      navigate('/signin')
+    } else if (isLoggedIn && (location.pathname === '/signin' || location.pathname === '/signup')) {
+      navigate('/dashboard')
+    }
+  }, [location.pathname, isLoggedIn, navigate])
 
-  const navigate = (p: string) => {
-    setPage(p as Page)
+  const handleNavigate = (pageKey: string) => {
+    // Map page keys used in legacy callbacks to URL routes
+    const pageRouteMap: Record<string, string> = {
+      home: '/',
+      signin: '/signin',
+      signup: '/signup',
+      dashboard: '/dashboard',
+      upload: '/upload',
+      chat: '/chat',
+      library: '/library',
+      history: '/history',
+      settings: '/settings',
+      profile: '/profile',
+    }
+
+    const route = pageRouteMap[pageKey] || pageKey
+    navigate(route)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const handleFontSize = (size: FontSize) => {
-    setFontSize(size)
-    document.documentElement.style.setProperty('--font-size-base', fontSizeMap[size])
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    navigate('/')
+  }
+
+  const isAppPage = PROTECTED_PATHS.includes(location.pathname)
+  const shouldHideNavbar = isAppPage || location.pathname === '/signin' || location.pathname === '/signup'
+
+  // Map route path back to pageKey for legacy navbar active highlighting
+  const getPageKey = () => {
+    if (location.pathname === '/') return 'home'
+    return location.pathname.substring(1)
   }
 
   return (
-    <div className={`min-h-screen bg-bg-base fs-${fontSize}`} style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}>
-      <Navbar onNavigate={navigate} currentPage={page} fontSize={fontSize} onFontSizeChange={handleFontSize} />
+    <div className="min-h-screen bg-[#FAFAF8]" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+      {/* Global Navbar: only on public pages, excluding auth pages */}
+      {!shouldHideNavbar && (
+        <Navbar
+          onNavigate={handleNavigate}
+          currentPage={getPageKey()}
+          isLoggedIn={isLoggedIn}
+          onLogout={handleLogout}
+        />
+      )}
 
-      <main>
-        {page === 'home' && <HomePage onNavigate={navigate} />}
-        {page === 'upload' && <UploadPage onNavigate={navigate} />}
-        {page === 'report' && <ReportViewPage onNavigate={navigate} />}
-        {page === 'signin' && <SignInPage onNavigate={navigate} />}
-        {page === 'signup' && <SignUpPage onNavigate={navigate} />}
-        {page === 'forgot-password' && <ForgotPasswordPage onNavigate={navigate} />}
-        {page === 'dashboard' && <DashboardPage onNavigate={navigate} />}
-        {page === 'upload-report' && <UploadReportPage onNavigate={navigate} />}
-        {page === 'processing' && <ProcessingPage onNavigate={navigate} />}
-        {page === 'summary' && <ReportSummaryPage onNavigate={navigate} />}
-        {page === 'test-values' && <TestValuesPage onNavigate={navigate} />}
-        {page === 'value-detail' && <ValueDetailPage onNavigate={navigate} />}
-        {page === 'chat' && <ChatPage onNavigate={navigate} />}
-        {page === 'voice' && <VoiceSummaryPage onNavigate={navigate} />}
-        {page === 'translation' && <TranslationPage onNavigate={navigate} />}
-        {page === 'history' && <HistoryPage onNavigate={navigate} />}
-        {page === 'export' && <ExportPage onNavigate={navigate} />}
-        {page === 'profile' && <ProfilePage onNavigate={navigate} />}
-        {page === 'settings' && <SettingsPage onNavigate={navigate} />}
-        {page === 'errors' && <ErrorStatesPage onNavigate={navigate} />}
-      </main>
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={<HomePage onNavigate={handleNavigate} />} />
+        <Route
+          path="/signin"
+          element={
+            <AuthPage
+              onNavigate={handleNavigate}
+              onLoginSuccess={() => setIsLoggedIn(true)}
+              initialMode="signin"
+            />
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <AuthPage
+              onNavigate={handleNavigate}
+              onLoginSuccess={() => setIsLoggedIn(true)}
+              initialMode="signup"
+            />
+          }
+        />
+
+        {/* Protected Routes */}
+        <Route
+          path="/dashboard"
+          element={
+            isLoggedIn ? (
+              <DashboardPage onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/signin" replace />
+            )
+          }
+        />
+        <Route
+          path="/upload"
+          element={
+            isLoggedIn ? (
+              <UploadPage onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/signin" replace />
+            )
+          }
+        />
+        <Route
+          path="/chat"
+          element={
+            isLoggedIn ? (
+              <ChatPage onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/signin" replace />
+            )
+          }
+        />
+        <Route
+          path="/library"
+          element={
+            isLoggedIn ? (
+              <MedicalLibraryPage onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/signin" replace />
+            )
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            isLoggedIn ? (
+              <HistoryPage onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/signin" replace />
+            )
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            isLoggedIn ? (
+              <ProfilePage onNavigate={handleNavigate} />
+            ) : (
+              <Navigate to="/signin" replace />
+            )
+          }
+        />
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
   )
 }

@@ -1,29 +1,83 @@
 import { useEffect, useState } from 'react'
 
-type Page = 'home' | 'upload' | 'report' | 'signin' | 'signup'
-
 interface NavbarProps {
-  onNavigate: (page: Page) => void
+  onNavigate: (page: string) => void
   currentPage: string
-  fontSize: 'normal' | 'large' | 'xl'
-  onFontSizeChange: (size: 'normal' | 'large' | 'xl') => void
+  fontSize?: 'normal' | 'large' | 'xl'
+  onFontSizeChange?: (size: 'normal' | 'large' | 'xl') => void
+  isLoggedIn?: boolean
+  onLogout?: () => void
 }
 
-export default function Navbar({ onNavigate, currentPage, fontSize, onFontSizeChange }: NavbarProps) {
-  const [scrolled, setScrolled] = useState(false)
+const NAV_LINKS = [
+  { label: 'Home',            page: 'home' },
+  { label: 'Features',        page: 'home', hash: 'features' },
+  { label: 'How It Works',    page: 'home', hash: 'how-it-works' },
+  { label: 'Testimonials',    page: 'home', hash: 'testimonials' },
+  { label: 'FAQ',             page: 'home', hash: 'faq' },
+]
+
+const MOBILE_LINKS = [
+  { label: 'Home',            page: 'home' },
+  { label: 'Dashboard',       page: 'dashboard' },
+  { label: 'Upload Report',   page: 'upload' },
+  { label: 'AI Chat',         page: 'chat' },
+  { label: 'Report History',  page: 'history' },
+]
+
+export default function Navbar({ onNavigate, currentPage, isLoggedIn, onLogout }: NavbarProps) {
+  const [scrolled, setScrolled]     = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [activeHash, setActiveHash] = useState('')
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 16)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 16)
 
-  const handleNavigate = (page: Page, hash?: string) => {
+      if (currentPage !== 'home') {
+        setActiveHash('')
+        return
+      }
+
+      const sections = ['features', 'how-it-works', 'testimonials', 'faq']
+      let currentActive = ''
+      const scrollPosition = window.scrollY + 120 // offset for navbar height
+
+      for (const sectionId of sections) {
+        const element = document.getElementById(sectionId)
+        if (element) {
+          const top = element.offsetTop
+          const height = element.offsetHeight
+          if (scrollPosition >= top && scrollPosition < top + height) {
+            currentActive = sectionId
+            break
+          }
+        }
+      }
+
+      if (window.scrollY < 200) {
+        currentActive = ''
+      }
+
+      setActiveHash(currentActive)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
+
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [currentPage])
+
+  const handleNavigate = (page: string, hash?: string) => {
     onNavigate(page)
     setMobileOpen(false)
     if (hash) {
-      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setActiveHash(hash)
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 50)
+    } else {
+      setActiveHash('')
     }
   }
 
@@ -31,18 +85,22 @@ export default function Navbar({ onNavigate, currentPage, fontSize, onFontSizeCh
     <>
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled || mobileOpen ? 'bg-white/80 shadow-[0_12px_36px_rgba(16,50,46,0.12)] backdrop-blur-xl' : 'bg-transparent'
+          scrolled || mobileOpen
+            ? 'bg-white/90 shadow-[0_8px_32px_rgba(16,50,46,0.08)] backdrop-blur-xl'
+            : 'bg-transparent'
         }`}
         role="navigation"
         aria-label="Main navigation"
       >
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 md:h-18 md:px-12">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6 md:px-12">
+
+          {/* Brand */}
           <button
             onClick={() => handleNavigate('home')}
-            className="flex items-center gap-2.5 focus-visible:outline-brand-primary"
+            className="flex items-center gap-2.5"
             aria-label="ArogyaGPT home"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E1F5EE] shadow-[0_8px_24px_rgba(29,158,117,0.16)]">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#E1F5EE] shadow-[0_4px_16px_rgba(29,158,117,0.2)]">
               <svg viewBox="0 0 32 32" fill="none" className="h-6 w-6" aria-hidden="true">
                 <path d="M6 26 C6 26 8 14 16 10 C24 6 28 10 28 10 C28 10 24 22 16 24 C12 25 8 24 6 26Z" fill="none" stroke="#1D9E75" strokeWidth="1.5" strokeLinecap="round" />
                 <path d="M6 26 L16 16" stroke="#1D9E75" strokeWidth="1.5" strokeLinecap="round" />
@@ -54,78 +112,64 @@ export default function Navbar({ onNavigate, currentPage, fontSize, onFontSizeCh
             </span>
           </button>
 
-          <div className="hidden items-center gap-8 md:flex">
-            {[
-              { label: 'Home', page: 'home' as const },
-              { label: 'How It Works', page: 'home' as const, hash: 'how-it-works' },
-              { label: 'Languages', page: 'home' as const, hash: 'languages' },
-            ].map((item) => (
-              <button
-                key={item.label}
-                onClick={() => handleNavigate(item.page, item.hash)}
-                className="nav-link relative font-body text-sm tracking-wide text-[#4A5E59] transition-colors duration-200 hover:text-[#18322D]"
-                aria-current={currentPage === item.page ? 'page' : undefined}
-              >
-                {item.label}
-              </button>
-            ))}
+          {/* Desktop links */}
+          <div className="hidden items-center gap-7 md:flex">
+            {NAV_LINKS.map((item) => {
+              const isActive =
+                currentPage === item.page &&
+                ((!item.hash && !activeHash) || (item.hash === activeHash))
+              return (
+                <button
+                  key={item.label}
+                  onClick={() => handleNavigate(item.page, item.hash)}
+                  className={`nav-link relative font-body text-sm font-medium transition-colors duration-200 ${
+                    isActive
+                      ? 'text-[#1D9E75] font-semibold'
+                      : 'text-[#4A5E59] hover:text-[#18322D]'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              )
+            })}
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden items-center gap-0.5 rounded-full border border-[#DCEBE6] bg-white/80 p-1 md:flex" role="group" aria-label="Text size">
-              {(['normal', 'large', 'xl'] as const).map((size, i) => (
-                <button
-                  key={size}
-                  onClick={() => onFontSizeChange(size)}
-                  className={`rounded-full px-2.5 py-1 font-body text-sm transition-all ${fontSize === size ? 'bg-[#1D9E75] text-white' : 'text-[#4A5E59] hover:text-[#18322D]'}`}
-                  style={{ fontSize: `${0.7 + i * 0.1}rem` }}
-                  aria-label={`${size === 'normal' ? 'Normal' : size === 'large' ? 'Large' : 'Extra large'} text`}
-                  aria-pressed={fontSize === size}
-                >
-                  A
-                </button>
-              ))}
-            </div>
-
-            {currentPage !== 'home' && currentPage !== 'signin' && currentPage !== 'signup' ? (
-              <>
-                <button className="hidden rounded-full border border-[#DCEBE6] bg-white/80 p-2 text-[#4A5E59] transition hover:text-[#18322D] md:flex" aria-label="Notifications">
-                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
-                    <path d="M10 3.5 A2.5 2.5 0 0 0 7.5 6V8.5L6.2 10.8A1 1 0 0 0 7 13H13A1 1 0 0 0 13.8 10.8L12.5 8.5V6A2.5 2.5 0 0 0 10 3.5Z" stroke="currentColor" strokeWidth="1.2" />
-                    <path d="M8 13.5C8.2 14.7 9 15.5 10 15.5C11 15.5 11.8 14.7 12 13.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-                  </svg>
-                </button>
-
-                <button
-                  onClick={() => handleNavigate('upload')}
-                  className="btn-shimmer hidden rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-4 py-2 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(29,158,117,0.24)] transition-transform duration-200 hover:scale-[1.01] md:inline-flex md:items-center md:gap-2"
-                  aria-label="Upload your medical report"
-                >
-                  Upload Report
-                  <span aria-hidden="true">→</span>
-                </button>
-              </>
-            ) : null}
-
+          {/* Right — CTA + mobile hamburger */}
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => handleNavigate('signin')}
-              className="hidden rounded-full border border-[#DCEBE6] bg-white/80 px-4 py-2 text-sm font-semibold text-[#18322D] transition hover:border-[#1D9E75]/40 hover:text-[#1D9E75] md:inline-flex"
-              aria-label="Sign in"
+              onClick={() => handleNavigate('upload')}
+              className="btn-shimmer hidden rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(29,158,117,0.24)] hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200 md:inline-flex md:items-center md:gap-2"
             >
-              {currentPage === 'signin' ? 'Home' : 'Sign in'}
+              Upload Report →
             </button>
 
+            {isLoggedIn ? (
+              <button
+                onClick={onLogout}
+                className="hidden rounded-full border border-[#DCEBE6] bg-white px-5 py-2 text-sm font-semibold text-[#18322D] hover:bg-[#FAFAF8] transition duration-200 md:inline-flex"
+              >
+                Sign Out
+              </button>
+            ) : (
+              <button
+                onClick={() => handleNavigate('signin')}
+                className="hidden rounded-full border border-[#DCEBE6] bg-white px-5 py-2 text-sm font-semibold text-[#18322D] hover:bg-[#FAFAF8] transition duration-200 md:inline-flex"
+              >
+                Sign In
+              </button>
+            )}
+
+            {/* Mobile hamburger */}
             <button
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-[#DCEBE6] bg-white/90 text-[#18322D] shadow-[0_8px_24px_rgba(16,50,46,0.08)] md:hidden"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-[#DCEBE6] bg-white/90 text-[#18322D] shadow-sm transition hover:border-[#1D9E75]/40 md:hidden"
               onClick={() => setMobileOpen((v) => !v)}
               aria-label="Toggle menu"
-              aria-expanded={mobileOpen}
             >
-              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
                 {mobileOpen ? (
-                  <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 ) : (
-                  <><path d="M4 7H20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M4 12H20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /><path d="M4 17H20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
                 )}
               </svg>
             </button>
@@ -133,33 +177,44 @@ export default function Navbar({ onNavigate, currentPage, fontSize, onFontSizeCh
         </div>
       </nav>
 
+      {/* Mobile drawer */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-40 bg-[rgba(16,50,46,0.55)] px-6 pt-24 backdrop-blur-sm md:hidden" onClick={() => setMobileOpen(false)}>
-          <div className="rounded-[28px] border border-white/80 bg-white/95 p-6 shadow-[0_20px_60px_rgba(16,50,46,0.2)]" onClick={(e) => e.stopPropagation()}>
-            <div className="flex flex-col gap-3">
-              {[
-                { label: 'Home', page: 'home' as const },
-                { label: 'How It Works', page: 'home' as const, hash: 'how-it-works' },
-                { label: 'Languages', page: 'home' as const, hash: 'languages' },
-              ].map((item) => (
+        <div
+          className="fixed inset-0 z-40 bg-[rgba(16,50,46,0.5)] px-5 pt-20 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileOpen(false)}
+        >
+          <div
+            className="rounded-3xl border border-white/60 bg-white p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex flex-col gap-1">
+              {MOBILE_LINKS.map((item) => (
                 <button
                   key={item.label}
-                  onClick={() => handleNavigate(item.page, item.hash)}
-                  className="rounded-2xl px-4 py-3 text-left font-body text-base font-medium text-[#18322D] transition hover:bg-[#E1F5EE]"
+                  onClick={() => handleNavigate(item.page)}
+                  className="rounded-2xl px-4 py-3 text-left font-body text-sm font-medium text-[#18322D] transition hover:bg-[#E1F5EE] hover:text-[#1D9E75]"
                 >
                   {item.label}
                 </button>
               ))}
-              <div className="mt-2 flex flex-col gap-3">
-                <button onClick={() => handleNavigate('signin')} className="rounded-full border border-[#DCEBE6] bg-white px-4 py-3 font-semibold text-[#18322D]">
-                  Sign in
+              {isLoggedIn ? (
+                <button
+                  onClick={() => {
+                    setMobileOpen(false)
+                    if (onLogout) onLogout()
+                  }}
+                  className="rounded-2xl px-4 py-3 text-left font-body text-sm font-medium text-red-600 transition hover:bg-red-50"
+                >
+                  Sign Out
                 </button>
-                {currentPage !== 'home' && currentPage !== 'signin' && currentPage !== 'signup' ? (
-                  <button onClick={() => handleNavigate('upload')} className="rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-4 py-3 font-semibold text-white">
-                    Upload Your Report
-                  </button>
-                ) : null}
-              </div>
+              ) : (
+                <button
+                  onClick={() => handleNavigate('signin')}
+                  className="rounded-2xl px-4 py-3 text-left font-body text-sm font-medium text-[#1D9E75] transition hover:bg-[#E1F5EE]"
+                >
+                  Sign In
+                </button>
+              )}
             </div>
           </div>
         </div>
