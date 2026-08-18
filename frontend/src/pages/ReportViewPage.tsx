@@ -35,6 +35,8 @@ const PDF_INSIGHTS = [
   { icon: '🫀', title: 'Hemoglobin is Slightly Low',   body: 'Your hemoglobin at 13.2 g/dL is marginally below the normal male range. Include iron-rich foods like spinach, lentils, and red meat. A follow-up blood test in 6–8 weeks is recommended.' },
 ]
 
+const AVAILABLE_LANGUAGES = ['English', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Malayalam', 'Bengali']
+
 type DownloadState = 'idle' | 'generating' | 'done'
 
 export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
@@ -139,6 +141,11 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
 
             {/* Language selector */}
             <button
+              onClick={() => {
+                const currentIndex = AVAILABLE_LANGUAGES.indexOf(language);
+                const nextIndex = (currentIndex + 1) % AVAILABLE_LANGUAGES.length;
+                setLanguage(AVAILABLE_LANGUAGES[nextIndex]);
+              }}
               className="hidden md:flex items-center gap-1.5 font-body text-sm text-text-secondary
                          px-3 py-1.5 rounded-md border border-[rgba(46,125,107,0.15)]
                          hover:border-brand-glow/40 transition-colors duration-fast min-h-[40px]"

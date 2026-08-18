@@ -35,7 +35,7 @@ export default function ChatPanel() {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const { speak, pause, resume, isSpeaking, isPaused } = useSpeech()
-  const { startListening, stopListening, isListening, transcript, setTranscript } = useSpeechRecognition('English')
+  const { startListening, stopListening, isListening, transcript, setTranscript } = useSpeechRecognition('Tamil')
   
   const [speakingId, setSpeakingId] = useState<number | null>(null)
 
@@ -49,7 +49,7 @@ export default function ChatPanel() {
     } else if (speakingId === id && isPaused) {
       resume()
     } else {
-      speak(text, 'English')
+      speak(text, 'Tamil')
       setSpeakingId(id)
     }
   }
@@ -70,13 +70,25 @@ export default function ChatPanel() {
     setSuggested([])
     setTyping(true)
 
-    // Simulate AI response delay
-    await new Promise(r => setTimeout(r, 1400))
-    const response = AI_RESPONSES[text] ||
-      'I can help you understand your report. Could you ask about a specific test value or symptom you are concerned about?'
-
-    setTyping(false)
-    setMessages(p => [...p, { id: msgId++, role: 'ai', text: response, lang: 'English' }])
+    try {
+      const res = await fetch('http://localhost:11434/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'llama3.2:latest',
+          prompt: "You are a helpful medical assistant answering questions about a medical report. You MUST answer the user in Tamil language. Keep answers concise, simple, and compassionate.\n\nUser: " + text,
+          stream: false
+        })
+      });
+      const data = await res.json();
+      const response = data.response || "I couldn't generate a response.";
+      setTyping(false)
+      setMessages(p => [...p, { id: msgId++, role: 'ai', text: response, lang: 'Tamil' }])
+    } catch (error) {
+      console.error('Ollama connection error:', error)
+      setTyping(false)
+      setMessages(p => [...p, { id: msgId++, role: 'ai', text: 'Unable to connect to local Ollama model. Please make sure Ollama is running on your machine.', lang: 'English' }])
+    }
   }
 
   const handleKey = (e: React.KeyboardEvent) => {
@@ -228,7 +240,7 @@ export default function ChatPanel() {
             value={input}
             onChange={e => { setInput(e.target.value); autoResize() }}
             onKeyDown={handleKey}
-            placeholder={isListening ? "Listening... speak in English" : "Ask anything about your report..."}
+            placeholder={isListening ? "Listening... speak in Tamil" : "Ask anything about your report..."}
             className={`flex-1 bg-transparent font-body text-base resize-none outline-none min-h-[48px] max-h-[120px] py-2.5 px-2 leading-[1.5] ${isListening ? 'text-brand-glow italic' : 'text-text-primary placeholder-text-muted'}`}
             aria-label="Type your question"
             rows={1}

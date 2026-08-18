@@ -1,91 +1,72 @@
 const steps = [
   {
-    number: '01',
-    icon: (
-      <svg className="h-8 w-8" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <rect x="6" y="4" width="20" height="24" rx="3" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M16 4 L16 12 M12 8 L20 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <path d="M16 12 L16 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeDasharray="2 2" />
-      </svg>
-    ),
-    title: 'Drop Your Report',
-    body: 'PDF or image — we handle both. Simply drag and drop or tap to browse.',
+    step: 'Step 1',
+    title: 'Upload Report',
+    description: 'Drag and drop your PDF lab results, scan photo, or DOCX medical file into your secure workspace.',
+    icon: '📄',
   },
   {
-    number: '02',
-    icon: (
-      <svg className="h-8 w-8" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <circle cx="14" cy="14" r="8" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M20 20 L27 27" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <circle cx="14" cy="14" r="2" fill="currentColor" className="animate-pulse" />
-      </svg>
-    ),
-    title: 'We Read Every Line',
-    body: 'Our AI identifies every medical term, test value, and clinical reference in your report.',
+    step: 'Step 2',
+    title: 'AI Extracts Medical Information',
+    description: 'High-precision vision OCR scans values, reference ranges, clinical notes, and lab tables.',
+    icon: '🔍',
   },
   {
-    number: '03',
-    icon: (
-      <svg className="h-8 w-8" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <path d="M4 10 H12 M4 16 H16 M4 22 H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <path d="M20 10 H28 M20 16 H26 M20 22 H24" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeOpacity="0.5" />
-        <path d="M17 8 L17 24" stroke="currentColor" strokeWidth="1" strokeDasharray="2 2" strokeOpacity="0.4" />
-      </svg>
-    ),
-    title: 'Plain Language. Your Language.',
-    body: 'Complex terms become simple sentences — in Tamil, Hindi, or any language you choose.',
+    step: 'Step 3',
+    title: 'Medical Terms Simplified',
+    description: 'Dense medical terminology is translated into clear, empathetic, plain-language summaries.',
+    icon: '💡',
   },
   {
-    number: '04',
-    icon: (
-      <svg className="h-8 w-8" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <path d="M6 8 C6 6 8 4 10 4 L22 4 C24 4 26 6 26 8 L26 18 C26 20 24 22 22 22 L18 22 L14 28 L14 22 L10 22 C8 22 6 20 6 18 Z" stroke="currentColor" strokeWidth="1.5" />
-        <path d="M12 13 C12 11.5 13.5 10.5 15 11 C16 11.3 16.5 12 16 13 C15.5 14 14 14.5 14 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        <circle cx="14" cy="18.5" r="0.8" fill="currentColor" />
-      </svg>
-    ),
-    title: 'Ask. Explore. Know.',
-    body: 'Chat directly with your report. Ask what worries you — in your own words.',
+    step: 'Step 4',
+    title: 'Chat With Report',
+    description: 'Ask questions, clarify diagnoses, check dosage guidance, and understand abnormal flags with AI.',
+    icon: '💬',
+  },
+  {
+    step: 'Step 5',
+    title: 'Download Simplified Report',
+    description: 'Export an easy-to-read PDF summary to keep for your records or share with your doctor.',
+    icon: '📥',
   },
 ]
 
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="bg-[#FDFCFA] py-16 sm:py-20 md:py-24" aria-labelledby="how-it-works-heading">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-12 lg:px-16">
-        <div className="mb-10 text-center sm:mb-14 md:mb-16">
-          <p className="mb-4 font-body text-sm uppercase tracking-[0.16em] text-[#8FA49E]">The Process</p>
-          <h2 id="how-it-works-heading" className="font-display text-xl font-semibold tracking-[-0.02em] text-[#18322D] sm:text-2xl md:text-3xl">
-            From Complex to Clear — <span className="text-[#1D9E75]">in 4 Steps</span>
+    <section id="how-it-works" className="py-20 bg-[#FAFAF8] relative overflow-hidden" aria-label="How It Works">
+      <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-16">
+        <div className="text-center max-w-2xl mx-auto mb-16">
+          <p className="font-body text-xs uppercase tracking-[0.2em] font-semibold text-[#1D9E75] mb-3">
+            5 Simple Steps
+          </p>
+          <h2 className="font-display text-3xl sm:text-4xl font-semibold text-[#18322D] tracking-tight">
+            How MedSimplify AI Works
           </h2>
+          <p className="mt-4 font-body text-base text-[#4A5E59]">
+            From dense medical report to clear understanding in under 30 seconds.
+          </p>
         </div>
 
-        <div className="relative">
-          <svg className="pointer-events-none absolute left-[12.5%] top-14 hidden h-[2px] w-[75%] lg:block" viewBox="0 0 1000 2" preserveAspectRatio="none" aria-hidden="true">
-            <path d="M0 1 C180 1, 320 1, 500 1 S820 1, 1000 1" fill="none" stroke="#88D9C4" strokeWidth="2" strokeLinecap="round" className="connector-path" />
-          </svg>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
-            {steps.map((step, index) => (
-              <div key={step.number} className="step-card scroll-reveal relative flex flex-col items-center text-center" style={{ animationDelay: `${index * 90}ms` }}>
-                <div className="relative mb-6 flex h-24 w-24 items-center justify-center rounded-full p-[2px] shadow-[0_16px_34px_rgba(29,158,117,0.16)]" style={{ background: 'conic-gradient(from 180deg, #1D9E75 0deg, #7FD5BF 180deg, #1D9E75 360deg)' }}>
-                  <div className="flex h-full w-full items-center justify-center rounded-full border border-white/70 bg-white/95 text-[#E6A817] shadow-inner">
-                    {step.icon}
-                  </div>
-                  <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-[#18322D] font-mono text-[0.7rem] font-semibold text-white" aria-label={`Step ${step.number}`}>
-                    {step.number}
-                  </span>
-                </div>
-
-                <h3 className="mb-3 font-display text-xl font-medium tracking-[-0.01em] text-[#18322D]">
-                  {step.title}
-                </h3>
-                <p className="max-w-[220px] font-body text-base leading-[1.7] text-[#4A5E59]">
-                  {step.body}
-                </p>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 relative">
+          {steps.map((item, idx) => (
+            <div
+              key={idx}
+              className="relative rounded-[24px] border border-[#E3F1EB] bg-white p-6 shadow-[0_10px_30px_rgba(24,50,45,0.04)] flex flex-col items-center text-center transition-all duration-300 hover:-translate-y-1 hover:border-[#1D9E75]/40"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#E1F5EE] text-2xl mb-4">
+                {item.icon}
               </div>
-            ))}
-          </div>
+              <span className="font-body text-[11px] font-bold uppercase tracking-wider text-[#1D9E75] mb-1">
+                {item.step}
+              </span>
+              <h3 className="font-display text-base font-semibold text-[#18322D] mb-2 leading-snug">
+                {item.title}
+              </h3>
+              <p className="font-body text-xs text-[#4A5E59] leading-relaxed">
+                {item.description}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
