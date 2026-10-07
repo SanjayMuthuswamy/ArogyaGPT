@@ -3,6 +3,7 @@ import AuthenticatedShell from '../components/layout/AuthenticatedShell'
 import { api } from '../services/api'
 
 const LANGUAGES = [
+  { code: 'en', native: 'English', english: 'English', flag: '🌐' },
   { code: 'ta', native: 'தமிழ்', english: 'Tamil', flag: '🇮🇳' },
   { code: 'hi', native: 'हिन्दी', english: 'Hindi', flag: '🇮🇳' },
   { code: 'te', native: 'తెలుగు', english: 'Telugu', flag: '🇮🇳' },
@@ -25,7 +26,7 @@ interface UploadPageProps {
 export default function UploadPage({ onNavigate }: UploadPageProps) {
   const [dragOver, setDragOver] = useState(false)
   const [file, setFile] = useState<File | null>(null)
-  const [language, setLanguage] = useState('ta')
+  const [language, setLanguage] = useState('en')
   const [processing, setProcessing] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [processStep, setProcessStep] = useState(-1)

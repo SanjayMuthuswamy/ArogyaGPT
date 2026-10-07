@@ -64,7 +64,6 @@ const PROTECTED_PAGES: Page[] = [
   'profile',
   'settings',
   'errors',
-  'library',
 ]
 
 const fontSizeMap: Record<FontSize, string> = {
@@ -171,7 +170,6 @@ export default function App() {
         {page === 'profile' && <ProfilePage onNavigate={navigate} />}
         {page === 'settings' && <SettingsPage onNavigate={navigate} />}
         {page === 'errors' && <ErrorStatesPage onNavigate={navigate} />}
-        {page === 'library' && <MedicalLibraryPage onNavigate={navigate} />}
       </main>
     </div>
   )
