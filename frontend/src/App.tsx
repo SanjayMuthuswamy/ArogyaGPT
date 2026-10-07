@@ -20,7 +20,7 @@ import TranslationPage from './pages/TranslationPage'
 import ExportPage from './pages/ExportPage'
 import SettingsPage from './pages/SettingsPage'
 import ErrorStatesPage from './pages/ErrorStatesPage'
-import MedicalLibraryPage from './pages/MedicalLibraryPage'
+
 
 type Page =
   | 'home'
@@ -43,7 +43,6 @@ type Page =
   | 'profile'
   | 'settings'
   | 'errors'
-  | 'library'
 
 type FontSize = 'normal' | 'large' | 'xl'
 

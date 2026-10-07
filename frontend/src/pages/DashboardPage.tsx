@@ -48,6 +48,8 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [filter, setFilter] = useState<StatusType | 'All'>('All')
   const [reports, setReports] = useState<Report[]>([])
   const [totalReports, setTotalReports] = useState(0)
+  const [rowsPerPage, setRowsPerPage] = useState(10)
+  const [currentPage, setCurrentPage] = useState(1)
 
   useEffect(() => {
     api.listReports({ per_page: 20 })
@@ -69,6 +71,13 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
     const matchesFilter = filter === 'All' || report.status === filter
     return matchesSearch && matchesFilter
   })
+
+  const totalPages = Math.max(1, Math.ceil(filteredReports.length / rowsPerPage))
+  const paginatedReports = filteredReports.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
+
+  const handleFilterChange = (f: StatusType | 'All') => { setFilter(f); setCurrentPage(1) }
+  const handleSearchChange = (v: string) => { setSearchQuery(v); setCurrentPage(1) }
+  const handleRowsPerPageChange = (v: number) => { setRowsPerPage(v); setCurrentPage(1) }
 
   const getStatusBadge = (status: StatusType) => {
     const styles = {
@@ -251,7 +260,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
                 type="text"
                 placeholder="Search reports..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full rounded-full border border-gray-200 bg-white py-2 pl-10 pr-4 text-sm outline-none focus:border-[#1D9E75] focus:ring-1 focus:ring-[#1D9E75]"
               />
             </div>
@@ -262,7 +271,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
             {(['All', 'Completed', 'Needs Review', 'Processing', 'Critical'] as const).map(status => (
               <button
                 key={status}
-                onClick={() => setFilter(status)}
+                onClick={() => handleFilterChange(status)}
                 className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all duration-200 ${
                   filter === status
                     ? 'bg-[#1D9E75] text-white shadow-sm border border-[#1D9E75]'
@@ -288,7 +297,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
-              {filteredReports.map((report) => (
+              {paginatedReports.map((report) => (
                 <tr key={report.id} className="transition-colors hover:bg-gray-50/80 group">
                   <td className="px-6 py-4 text-gray-500 whitespace-nowrap">{report.date}</td>
                   <td className="px-6 py-4 font-medium text-gray-900">{report.type}</td>
@@ -306,14 +315,14 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
                   </td>
                 </tr>
               ))}
-              {filteredReports.length === 0 && (
+              {paginatedReports.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <span className="text-3xl">🔍</span>
                       <p>No reports found matching your criteria.</p>
                       <button 
-                        onClick={() => { setSearchQuery(''); setFilter('All'); }}
+                        onClick={() => { handleSearchChange(''); handleFilterChange('All'); }}
                         className="text-[#1D9E75] hover:underline mt-1"
                       >
                         Clear filters
@@ -324,6 +333,48 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/50 px-5 py-3">
+          {/* Rows per page */}
+          <div className="flex items-center gap-2 text-sm text-gray-500">
+            <span className="font-medium">›</span>
+            <span>Rows per page:</span>
+            <select
+              value={rowsPerPage}
+              onChange={e => handleRowsPerPageChange(Number(e.target.value))}
+              className="rounded-lg border border-gray-200 bg-white px-2 py-1 text-sm text-gray-700 focus:border-[#1D9E75] focus:outline-none cursor-pointer"
+            >
+              {[5, 10, 20, 50].map(n => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Page info + nav */}
+          <div className="flex items-center gap-3 text-sm text-gray-500">
+            <span>{filteredReports.length === 0 ? '0' : `${(currentPage - 1) * rowsPerPage + 1}–${Math.min(currentPage * rowsPerPage, filteredReports.length)}`} of {filteredReports.length}</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Previous page"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+              </button>
+              <span className="min-w-[2.5rem] text-center font-medium text-gray-700">{currentPage} / {totalPages}</span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                aria-label="Next page"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

@@ -74,7 +74,7 @@ export const useSpeech = () => {
       utterance.voice = voice;
     }
 
-    utterance.rate = 0.88; 
+    utterance.rate = 1.1;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 
