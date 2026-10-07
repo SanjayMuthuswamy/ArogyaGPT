@@ -1,0 +1,72 @@
+# ─── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.pyo
+
+# ─── Virtual Environments ─────────────────────────────────────
+backend/venv/
+venv/
+.venv/
+env/
+ENV/
+
+# ─── Environment / Secrets ────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── Database ─────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── Logs ─────────────────────────────────────────────────────
+backend/logs/
+logs/
+*.log
+
+# ─── Data / Model Files ───────────────────────────────────────
+backend/data/
+backend/faiss_index/
+backend/uploads/
+
+# ─── Test/Temp files ──────────────────────────────────────────
+backend/test_blood_report.png
+backend/test_sample.txt
+backend/sample_medical_report.pdf
+
+# ─── Node / Frontend ──────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+node_modules/
+.pnp
+.pnp.js
+
+# ─── Build output ─────────────────────────────────────────────
+dist/
+build/
+*.tsbuildinfo
+
+# ─── IDE / OS ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Coverage / Testing ───────────────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

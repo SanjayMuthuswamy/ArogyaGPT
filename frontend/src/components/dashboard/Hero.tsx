@@ -1,17 +1,8 @@
 import { useEffect, useRef } from 'react'
 
 interface HeroProps {
-  onNavigate: (page: 'home' | 'upload' | 'report') => void
+  onNavigate: (page: string) => void
 }
-
-const languageChips = [
-  { native: 'தமிழ்', english: 'Tamil' },
-  { native: 'हिन्दी', english: 'Hindi' },
-  { native: 'తెలుగు', english: 'Telugu' },
-  { native: 'ಕನ್ನಡ', english: 'Kannada' },
-  { native: 'മലയാളം', english: 'Malayalam' },
-  { native: 'বাংলা', english: 'Bengali' },
-]
 
 export default function Hero({ onNavigate }: HeroProps) {
   const heroRef = useRef<HTMLDivElement>(null)
@@ -19,174 +10,175 @@ export default function Hero({ onNavigate }: HeroProps) {
   useEffect(() => {
     const el = heroRef.current
     if (!el) return
-    el.classList.add('animate-slide-up')
+    el.classList.add('scroll-reveal')
   }, [])
 
   return (
-    <section
-      className="relative min-h-screen flex items-center pt-16 overflow-hidden bg-bg-base"
-      aria-label="Hero section"
-    >
-      {/* Organic blob background */}
-      <div className="absolute top-0 right-0 w-2/3 h-full pointer-events-none overflow-hidden" aria-hidden="true">
-        <svg viewBox="0 0 600 600" className="absolute -top-32 -right-32 w-[700px] h-[700px] animate-blob opacity-[0.06]">
-          <defs>
-            <radialGradient id="blob-grad" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#7ECFC2" />
-              <stop offset="100%" stopColor="#2E7D6B" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-          <path
-            d="M 300 100 C 420 80 520 160 530 280 C 540 400 460 500 340 520 C 220 540 100 460 90 340 C 80 220 180 120 300 100 Z"
-            fill="url(#blob-grad)"
-          />
-        </svg>
-      </div>
+    <section className="relative flex min-h-[min(100vh,880px)] items-center overflow-hidden bg-[#FAFAF8] pt-20 sm:min-h-[92vh]" aria-label="Hero section">
+      {/* Background Gradient & Grid Pattern */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        aria-hidden="true"
+        style={{
+          background: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.96), rgba(240,249,246,0.92) 48%, rgba(224,242,236,0.8) 100%)',
+          backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.96), rgba(240,249,246,0.92) 48%, rgba(224,242,236,0.8) 100%), radial-gradient(rgba(29, 158, 117, 0.08) 1px, transparent 1px)',
+          backgroundSize: 'auto, 24px 24px',
+        }}
+      />
 
-      <div className="relative max-w-7xl mx-auto px-6 md:px-12 lg:px-16 w-full py-20">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-16 items-center">
+      <div className="relative mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:px-12 lg:px-16 lg:py-20 2xl:px-20">
+        <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-12 2xl:gap-16">
+          {/* Left Column: Heading & CTAs */}
+          <div ref={heroRef} className="lg:col-span-7">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#DCEBE6] bg-white/80 px-4 py-1.5 font-body text-xs font-semibold tracking-wide text-[#1D9E75] shadow-[0_4px_16px_rgba(29,158,117,0.08)] mb-6">
+              <span className="flex h-2 w-2 rounded-full bg-[#1D9E75] animate-ping" />
+              ArogyaGPT · AI Healthcare Assistant
+            </div>
 
-          {/* Left — 60% */}
-          <div ref={heroRef} className="lg:col-span-3 animate-slide-up">
-            {/* Eyebrow */}
-            <p className="font-body text-sm uppercase tracking-[0.12em] text-text-secondary mb-6">
-              Your Health. Your Language. Your Understanding.
-            </p>
-
-            {/* Headline */}
-            <h1 className="font-display text-4xl md:text-4xl lg:text-4xl font-semibold text-text-primary
-                           tracking-[-0.02em] leading-[1.15] mb-6 text-balance"
-                style={{ fontSize: 'clamp(2.2rem, 5vw, 3.5rem)' }}
+            <h1
+              className="mb-6 font-display font-light leading-[1.08] tracking-[-0.02em] text-[#18322D] text-balance"
+              style={{ fontSize: 'clamp(2.3rem, 4.5vw, 3.8rem)' }}
             >
-              Understand Your<br />
-              Medical Report,<br />
-              <em className="not-italic text-brand-primary">Finally.</em>
+              Understand Your<br />Medical Report,{' '}
+              <span className="bg-gradient-to-r from-[#1D9E75] to-[#0F766E] bg-clip-text font-medium text-transparent">
+                Finally.
+              </span>
             </h1>
 
-            {/* Sub-headline */}
-            <p className="font-body text-md text-text-secondary max-w-[480px] leading-[1.75] mb-12">
-              Upload any medical report — we simplify every term, highlight what matters,
-              and explain it in the language you grew up speaking.
+            <p className="mb-8 max-w-[720px] font-body text-base leading-relaxed text-[#4A5E59] sm:text-lg 2xl:text-xl">
+              Upload your medical reports, simplify complex medical terminology, chat with your reports using AI, and understand your health with confidence.
             </p>
 
-            {/* CTA row */}
-            <div className="flex flex-wrap items-center gap-4 mb-10">
+            <div className="mb-10 flex flex-wrap items-center gap-4">
               <button
-                onClick={() => onNavigate('upload')}
-                className="font-body font-medium text-base px-9 py-[18px] rounded-full
-                           bg-brand-primary text-text-inverse
-                           shadow-card hover:shadow-elevated
-                           hover:-translate-y-0.5
-                           transition-all duration-base ease-smooth
-                           min-h-[56px]"
-                aria-label="Upload your medical report now"
+                onClick={() => onNavigate('dashboard')}
+                className="btn-shimmer min-h-[52px] rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-8 py-[14px] font-body text-base font-semibold text-white shadow-[0_16px_40px_rgba(29,158,117,0.24)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(29,158,117,0.32)]"
               >
-                Upload Your Report Now
+                Get Started →
               </button>
               <button
-                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-                className="font-body font-medium text-base px-8 py-[17px] rounded-full
-                           text-brand-primary border border-brand-primary/20
-                           hover:border-brand-primary/40 hover:bg-brand-primary/5
-                           transition-all duration-base ease-smooth
-                           min-h-[56px]"
-                aria-label="See how ArogyaGPT works"
+                onClick={() => {
+                  document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
+                }}
+                className="min-h-[52px] rounded-full border border-[#CFE9E0] bg-white/80 px-8 py-[14px] font-body text-base font-semibold text-[#18322D] shadow-[0_6px_20px_rgba(24,50,45,0.04)] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#1D9E75]/40 hover:bg-[#F3FCF8]"
               >
-                See How It Works
+                Learn More
               </button>
             </div>
 
-            {/* Language trust strip */}
-            <div className="flex flex-wrap gap-2" aria-label="Supported languages">
-              {languageChips.map((lang) => (
-                <span
-                  key={lang.english}
-                  className="font-body text-sm px-3 py-1.5 rounded-full
-                             bg-bg-surface border border-brand-glow/30
-                             text-text-secondary"
-                >
-                  {lang.native} · {lang.english}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Right — 40% — floating report card mockup */}
-          <div className="lg:col-span-2 flex justify-center lg:justify-end" aria-hidden="true">
-            <div className="animate-float">
-              <div className="bg-bg-surface rounded-xl shadow-elevated p-7 w-full max-w-[360px]
-                              border border-[rgba(46,125,107,0.08)]">
-
-                {/* Card header */}
-                <div className="flex items-center justify-between mb-5">
-                  <div>
-                    <p className="font-body text-xs text-text-muted uppercase tracking-[0.1em] mb-1">
-                      Blood Report · June 2024
-                    </p>
-                    <p className="font-display text-lg font-medium text-text-primary">
-                      Mr. Rajan, 58
-                    </p>
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-brand-primary/10 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-brand-primary" viewBox="0 0 20 20" fill="none">
-                      <path d="M10 3 L10 17 M5 8 Q10 3 15 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </div>
-                </div>
-
-                {/* Critical value */}
-                <div className="row-critical rounded-lg p-4 mb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-status-critical text-base">!</span>
-                      <span className="font-body text-sm font-medium text-text-primary">Blood Sugar</span>
-                    </div>
-                    <span className="font-mono text-sm font-semibold text-status-critical">250 mg/dL</span>
-                  </div>
-                  <span className="inline-block text-xs px-2 py-0.5 rounded-full badge-critical font-body mb-2">
-                    High
-                  </span>
-                  <p className="font-body text-sm text-text-secondary leading-relaxed">
-                    Your blood sugar is above the healthy range. This needs attention.
-                  </p>
-                  <p className="font-body text-sm text-brand-secondary mt-2">
-                    உங்கள் இரத்த சர்க்கரை அளவு அதிகமாக உள்ளது.
-                  </p>
-                </div>
-
-                {/* Normal value */}
-                <div className="rounded-lg p-4 border border-[rgba(46,125,107,0.08)]">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-body text-sm font-medium text-text-primary">Hemoglobin</span>
-                    <span className="font-mono text-sm font-semibold text-text-primary">13.2 g/dL</span>
-                  </div>
-                  <span className="inline-block text-xs px-2 py-0.5 rounded-full badge-normal font-body">
-                    Normal
-                  </span>
-                  <p className="font-body text-sm text-text-secondary mt-2 leading-relaxed">
-                    Your blood's oxygen carrier is healthy.
-                  </p>
-                </div>
-
-                {/* Bottom strip */}
-                <div className="mt-4 pt-4 border-t border-[rgba(46,125,107,0.08)] flex items-center justify-between">
-                  <span className="font-body text-xs text-text-muted">2 of 12 values shown</span>
-                  <span className="font-body text-xs text-brand-primary font-medium cursor-pointer hover:underline">
-                    View full report →
-                  </span>
-                </div>
+            {/* Feature Pills */}
+            <div className="flex flex-wrap gap-4 text-xs font-body text-[#4A5E59]">
+              <div className="flex items-center gap-1.5 rounded-full border border-[#DCEBE6] bg-white/70 px-3.5 py-1.5 shadow-sm">
+                <span className="text-[#1D9E75]">✓</span> HIPAA Aligned
+              </div>
+              <div className="flex items-center gap-1.5 rounded-full border border-[#DCEBE6] bg-white/70 px-3.5 py-1.5 shadow-sm">
+                <span className="text-[#1D9E75]">✓</span> Vision OCR Extraction
+              </div>
+              <div className="flex items-center gap-1.5 rounded-full border border-[#DCEBE6] bg-white/70 px-3.5 py-1.5 shadow-sm">
+                <span className="text-[#1D9E75]">✓</span> Language Translation
               </div>
             </div>
           </div>
 
-        </div>
-      </div>
+          {/* Right Column: Hero Graphic Card */}
+          <div className="relative flex justify-center lg:col-span-5 lg:justify-end">
+            <div className="relative w-full max-w-[440px] animate-[float_6s_ease-in-out_infinite] 2xl:max-w-[520px]">
+              {/* Outer Glow */}
+              <div className="absolute -inset-4 rounded-[36px] bg-gradient-to-r from-[#1D9E75]/20 to-[#059669]/20 blur-2xl opacity-60 pointer-events-none" />
 
-      {/* Wave divider */}
-      <div className="absolute bottom-0 left-0 right-0" aria-hidden="true">
-        <svg viewBox="0 0 1440 80" preserveAspectRatio="none" className="w-full h-16 md:h-20">
-          <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="#FDFCFA" />
-        </svg>
+              {/* Glassmorphism Main Card */}
+              <div className="relative rounded-[28px] border border-white/90 bg-white/95 p-6 sm:p-8 shadow-[0_24px_64px_rgba(24,50,45,0.12)] backdrop-blur-xl">
+                
+                {/* Step 1: Upload Report */}
+                <div className="flex items-center justify-between rounded-[20px] border border-[#E3F1EB] bg-[#F7FCF9] p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    {/* PDF Icon */}
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-50 text-red-500 shadow-inner">
+                      <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="font-display text-sm font-semibold text-[#18322D]">Medical_Report.pdf</p>
+                      <p className="font-body text-xs text-[#8FA49E]">Step 1 · Upload Report</p>
+                    </div>
+                  </div>
+                  {/* Green checkmark */}
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#1D9E75] text-white">
+                    ✓
+                  </div>
+                </div>
+
+                {/* Animated Dotted Arrow 1 */}
+                <div className="flex justify-center my-3">
+                  <svg className="h-8 w-6 text-[#1D9E75]" fill="none" viewBox="0 0 24 32">
+                    <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="4 4" d="M12 2v28M6 24l6 6 6-6" className="animate-[pulse_1.5s_infinite]" />
+                  </svg>
+                </div>
+
+                {/* Step 2: AI Processing */}
+                <div className="flex items-center justify-between rounded-[20px] border border-[#E3F1EB] bg-white p-4 shadow-sm">
+                  <div className="flex items-center gap-3">
+                    {/* Glowing Circular Brain Icon */}
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E1F5EE] shadow-[0_0_15px_rgba(29,158,117,0.3)]">
+                      🧠
+                    </div>
+                    <div>
+                      <p className="font-display text-sm font-semibold text-[#18322D]">AI Processing</p>
+                      <p className="font-body text-xs text-[#1D9E75]">Analyzing medical terminology...</p>
+                    </div>
+                  </div>
+                  {/* Progress Indicator */}
+                  <div className="relative flex items-center justify-center">
+                    <svg className="h-10 w-10 transform -rotate-90">
+                      <circle cx="20" cy="20" r="16" stroke="#E3F1EB" strokeWidth="3" fill="transparent" />
+                      <circle cx="20" cy="20" r="16" stroke="#1D9E75" strokeWidth="3" fill="transparent" strokeDasharray={100} strokeDashoffset={4} className="transition-all duration-1000" />
+                    </svg>
+                    <span className="absolute font-mono text-[10px] font-bold text-[#18322D]">96%</span>
+                  </div>
+                </div>
+
+                {/* Animated Dotted Arrow 2 */}
+                <div className="flex justify-center my-3">
+                  <svg className="h-8 w-6 text-[#1D9E75]" fill="none" viewBox="0 0 24 32">
+                    <path stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeDasharray="4 4" d="M12 2v28M6 24l6 6 6-6" className="animate-[pulse_1.5s_infinite]" />
+                  </svg>
+                </div>
+
+                {/* Step 3: Smart Summary */}
+                <div className="rounded-[20px] border border-[#E3F1EB] bg-[#F7FCF9] p-4 shadow-sm">
+                  <div className="mb-3 flex items-center justify-between border-b border-[#EEF5F2] pb-2">
+                    <div>
+                      <p className="font-display text-sm font-semibold text-[#18322D]">Smart Summary</p>
+                      <p className="font-body text-xs text-[#8FA49E]">Step 3 · Structured Insights</p>
+                    </div>
+                    <span className="rounded-full bg-[#E1F5EE] px-2.5 py-1 text-[10px] font-semibold text-[#1D9E75]">AI Extracted</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs font-body text-[#4A5E59]">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[#1D9E75] font-bold">✓</span> Diseases Detected
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[#1D9E75] font-bold">✓</span> Abnormal Values
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[#1D9E75] font-bold">✓</span> Medicines
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[#1D9E75] font-bold">✓</span> Recommendations
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Complete Badge */}
+                <div className="mt-5 flex items-center justify-center gap-2 rounded-full bg-[#1D9E75] py-2 text-xs font-semibold text-white shadow-md">
+                  <span>✓</span> Analysis Complete
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   )

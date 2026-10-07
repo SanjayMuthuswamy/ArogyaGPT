@@ -1,11 +1,9 @@
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from sqlalchemy.orm import declarative_base
-from app.core.config import settings
+"""
+Compatibility shim: app.db.session → app.database.session
+Old code imported from app.db.session. This shim re-exports everything
+from the new location to avoid breaking changes during migration.
+"""
 
-engine = create_async_engine(settings.DATABASE_URL, echo=True)
-AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-Base = declarative_base()
+from app.database.session import Base, engine, AsyncSessionLocal, get_db, init_db, close_db
 
-async def get_db():
-    async with AsyncSessionLocal() as session:
-        yield session
+__all__ = ["Base", "engine", "AsyncSessionLocal", "get_db", "init_db", "close_db"]
