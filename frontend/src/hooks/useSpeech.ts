@@ -7,6 +7,9 @@ const langCodeMap: Record<string, string> = {
   'Kannada': 'kn-IN',
   'Malayalam': 'ml-IN',
   'Bengali': 'bn-IN',
+  'Marathi': 'mr-IN',
+  'Gujarati': 'gu-IN',
+  'Punjabi': 'pa-IN',
   'English': 'en-IN'
 };
 

@@ -39,6 +39,10 @@ if "sqlite" not in settings.DATABASE_URL:
         "pool_recycle": settings.DATABASE_POOL_RECYCLE,
         "pool_pre_ping": True,
     })
+else:
+    engine_kwargs.update({
+        "connect_args": {"timeout": 60}
+    })
 
 engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL,
