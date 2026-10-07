@@ -204,17 +204,15 @@ async def _pipeline_async(
             report.simplified_text = simplified_text
 
             # Generate summary
-            report.summary = await llm_service.generate_summary(simplified_text)
+            report.summary = await llm_service.generate_summary(simplified_text, language=language)
             await db.commit()
 
             # ---- Stage 8: Translation (if needed) ----
+            # LLMService already translates natively via prompt. We just persist the Translation record
+            # to satisfy the database schema/frontend expectations without hitting another LLM call.
             if language != "en":
                 report.pipeline_stage = PipelineStage.TRANSLATION.value
                 await db.commit()
-
-                from app.services.translation_service import TranslationService
-                translator = TranslationService()
-                translated = await translator.translate(simplified_text, target_lang=language)
 
                 from app.models.report import Translation
                 from app.core.constants import LANGUAGE_NAMES
@@ -222,8 +220,8 @@ async def _pipeline_async(
                     report_id=report_id,
                     language_code=language,
                     language_name=LANGUAGE_NAMES.get(language, language),
-                    original_text=simplified_text,
-                    translated_text=translated,
+                    original_text=cleaned_text, # Original English text
+                    translated_text=simplified_text, # LLM output is already in target language
                 ))
                 await db.commit()
 

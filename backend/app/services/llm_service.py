@@ -45,6 +45,10 @@ SUMMARY_PROMPT_TEMPLATE = """Create a very brief 3-5 sentence summary of this si
 
 {simplified_text}
 
+Instructions:
+1. Provide a concise summary.
+2. STRICT MULTILINGUAL REQUIREMENT: You MUST write the summary completely in {language}. Do not use English unless the term has no translation.
+
 Summary:"""
 
 CHAT_PROMPT_TEMPLATE = """You are ArogyaGPT, a compassionate AI medical assistant for Indian patients. You are answering questions about the patient's medical report.
@@ -216,13 +220,17 @@ Please consult your doctor for personalized medical advice."""
             logger.error(f"LLM simplification failed: {e}")
             raise LLMServiceError(f"Report simplification failed: {str(e)}")
 
-    async def generate_summary(self, simplified_text: str) -> str:
+    async def generate_summary(self, simplified_text: str, language: str = "en") -> str:
         """Generate a brief summary from already-simplified report text."""
+        target_lang = LANGUAGE_MAP.get(language.strip().lower(), language)
         if not settings.GROQ_API_KEY:
             return "Report analysis completed. Please review findings above."
 
         try:
-            prompt = SUMMARY_PROMPT_TEMPLATE.format(simplified_text=simplified_text[:3000])
+            prompt = SUMMARY_PROMPT_TEMPLATE.format(
+                simplified_text=simplified_text[:3000],
+                language=target_lang,
+            )
             result = await self._generate(prompt, max_tokens=250, temperature=0.2)
             return result
         except Exception as e:

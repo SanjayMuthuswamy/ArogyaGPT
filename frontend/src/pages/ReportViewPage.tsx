@@ -89,6 +89,9 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
         const data = await api.getReport(reportId)
         if (active) {
           setReportData(data)
+          if (data.translations && data.translations.length > 0) {
+            setLanguage(data.translations[0].language_name || 'English')
+          }
           if (data.status === 'processing' || data.status === 'pending') {
             setIsProcessing(true)
           } else {

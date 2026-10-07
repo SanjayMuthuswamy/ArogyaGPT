@@ -134,7 +134,9 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
                         <span className="font-body text-lg font-semibold text-text-primary">{section.name}</span>
                         <span className={`font-body text-xs px-2.5 py-1 rounded-full
                           ${abnormal > 0 ? 'bg-status-warning/10 text-status-warning' : 'bg-status-normal/10 text-status-normal'}`}>
-                          {section.params.length} values · {abnormal > 0 ? `${abnormal} abnormal` : 'all normal'}
+                          {section.params.length === 0 
+                            ? 'Diagnostic Report' 
+                            : `${section.params.length} values · ${abnormal > 0 ? `${abnormal} abnormal` : 'all normal'}`}
                         </span>
                       </div>
                       <svg
@@ -207,33 +209,42 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
               ))}
             </div>
 
-            <div className="space-y-1">
-              {/* Header */}
-              <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 px-4 py-2">
-                {['Parameter', 'Your Value', 'Normal Range', 'Status', 'Position'].map(h => (
-                  <span key={h} className="font-body text-xs uppercase tracking-[0.08em] text-text-muted">{h}</span>
+            {allParams.length === 0 ? (
+              <div className="bg-bg-surface rounded-lg border border-[rgba(46,125,107,0.1)] p-6 text-center mt-4">
+                <h3 className="font-display font-medium text-text-primary text-base mb-1">No Structured Values Found</h3>
+                <p className="text-sm text-text-muted max-w-md mx-auto">
+                  This report does not contain tabular laboratory values. It may be an imaging report (like an X-Ray or MRI) or a clinical note.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {/* Header */}
+                <div className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 px-4 py-2">
+                  {['Parameter', 'Your Value', 'Normal Range', 'Status', 'Position'].map(h => (
+                    <span key={h} className="font-body text-xs uppercase tracking-[0.08em] text-text-muted">{h}</span>
+                  ))}
+                </div>
+                {filtered.map((param, i) => (
+                  <div
+                    key={param.name}
+                    className={`grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-center
+                                 px-4 py-3 rounded-lg
+                                 ${i % 2 === 0 ? 'bg-bg-surface' : 'bg-bg-base/50'}`}
+                  >
+                    <span className="font-body text-base text-text-primary truncate">{param.name}</span>
+                    <span className={`font-mono text-sm font-semibold
+                      ${param.status === 'critical' ? 'text-status-critical'
+                        : param.status === 'warning' ? 'text-status-warning'
+                        : 'text-text-primary'}`}>
+                      {param.value} {param.unit}
+                    </span>
+                    <span className="font-mono text-xs text-text-muted">{param.range}</span>
+                    <StatusBadge status={param.status} />
+                    <RangeBar min={param.rangeMin} max={param.rangeMax} value={param.actualValue} />
+                  </div>
                 ))}
               </div>
-              {filtered.map((param, i) => (
-                <div
-                  key={param.name}
-                  className={`grid grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-center
-                               px-4 py-3 rounded-lg
-                               ${i % 2 === 0 ? 'bg-bg-surface' : 'bg-bg-base/50'}`}
-                >
-                  <span className="font-body text-base text-text-primary truncate">{param.name}</span>
-                  <span className={`font-mono text-sm font-semibold
-                    ${param.status === 'critical' ? 'text-status-critical'
-                      : param.status === 'warning' ? 'text-status-warning'
-                      : 'text-text-primary'}`}>
-                    {param.value} {param.unit}
-                  </span>
-                  <span className="font-mono text-xs text-text-muted">{param.range}</span>
-                  <StatusBadge status={param.status} />
-                  <RangeBar min={param.rangeMin} max={param.rangeMax} value={param.actualValue} />
-                </div>
-              ))}
-            </div>
+            )}
           </div>
         )}
         {/* TAB 3: Health Insights */}
@@ -242,6 +253,17 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
             {(() => {
               const abnormalParams = activeData.flatMap((s: Section) => s.params).filter((p: Parameter) => p.status !== 'normal')
               if (abnormalParams.length === 0) {
+                if (allParams.length === 0) {
+                  return (
+                    <div className="bg-bg-surface rounded-lg border border-[rgba(46,125,107,0.1)] p-6 text-center mt-4">
+                      <p className="text-2xl mb-2">📄</p>
+                      <h3 className="font-display font-medium text-text-primary text-base mb-1">No Structured Data to Analyze</h3>
+                      <p className="text-sm text-text-muted max-w-md mx-auto">
+                        This document does not contain tabular health data for automated insight generation. Please refer to the Simplified Report and Chat for insights.
+                      </p>
+                    </div>
+                  )
+                }
                 return (
                   <div className="bg-bg-surface rounded-lg border border-[rgba(46,125,107,0.1)] p-6 text-center">
                     <p className="text-2xl mb-2">✅</p>

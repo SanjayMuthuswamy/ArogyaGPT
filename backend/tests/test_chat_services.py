@@ -57,7 +57,7 @@ class TestChatAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["meta"]["total"] >= 2
+        assert data["total"] >= 2
 
     async def test_delete_chat_session(
         self, client: AsyncClient, auth_headers: dict
@@ -111,4 +111,4 @@ class TestVoiceAPI:
         assert response.status_code == 200
         data = response.json()
         assert data["success"] is True
-        assert data["meta"]["total"] == 0
+        assert data["total"] == 0
