@@ -81,10 +81,7 @@ export default function HistoryPage({ onNavigate }: HistoryPageProps) {
   const totalPages = Math.max(1, Math.ceil(filtered.length / rowsPerPage))
   const paginated = filtered.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
 
-  const handleFilterChange = (f: FilterStatus) => { setFilter(f); setCurrentPage(1) }
-  const handleSearchChange = (v: string) => { setSearch(v); setCurrentPage(1) }
   const handleRowsPerPageChange = (v: number) => { setRowsPerPage(v); setCurrentPage(1) }
-  const handleSortChange = (v: 'newest' | 'oldest') => { setSort(v); setCurrentPage(1) }
 
   const totalReports = items.length
   const completed    = items.filter(r => getStatus(r) === 'Completed').length
@@ -257,9 +254,14 @@ export default function HistoryPage({ onNavigate }: HistoryPageProps) {
                           </div>
 
                           {/* Summary snippet if available */}
-                          {(item as any).summary && (
-                            <p className="mt-2 text-[12.5px] text-[#4B5563] line-clamp-1">{(item as any).summary}</p>
-                          )}
+                          {(() => {
+                            const summaryText = 'summary' in item && typeof (item as { summary?: unknown }).summary === 'string'
+                              ? (item as { summary: string }).summary
+                              : ''
+                            return summaryText ? (
+                              <p className="mt-2 text-[12.5px] text-[#4B5563] line-clamp-1">{summaryText}</p>
+                            ) : null
+                          })()}
                         </div>
 
                         {/* Right: CTA */}

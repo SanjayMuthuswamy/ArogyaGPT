@@ -225,6 +225,15 @@ export default function AuthenticatedShell({
               <span className="hidden sm:inline">Upload Report</span>
             </button>
 
+            {onAction && actionLabel && (
+              <button
+                onClick={onAction}
+                className="hidden items-center gap-2 rounded-full border border-[#DCEBE6] bg-white px-3 py-2 font-body text-xs font-semibold text-[#18322D] shadow-sm transition hover:border-[#1D9E75]/40 hover:text-[#1D9E75] md:flex"
+              >
+                {actionLabel}
+              </button>
+            )}
+
             {/* Profile dropdown */}
             <div className="relative">
               <button

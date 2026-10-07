@@ -97,12 +97,13 @@ class AuthService:
             raise EmailAlreadyExistsError()
 
         # Create user
+        raw_role = data.role.value if hasattr(data.role, "value") else str(data.role)
         user = User(
             id=str(uuid.uuid4()),
             email=data.email.lower(),
             hashed_password=hash_password(data.password),
             full_name=data.full_name.strip(),
-            role=data.role.value,
+            role=raw_role,
             preferred_language=data.preferred_language,
             phone_number=data.phone_number,
             gender=data.gender,

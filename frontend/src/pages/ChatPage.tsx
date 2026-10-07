@@ -74,7 +74,7 @@ export default function ChatPage({ onNavigate }: ChatPageProps) {
       }
     }).catch(err => console.warn('Failed to fetch history:', err))
     return () => { active = false }
-  }, [])
+  }, [activeSession])
 
   // Fetch active report details
   useEffect(() => {

@@ -17,8 +17,6 @@ interface Report {
   simplifiedCount: number
 }
 
-const MOCK_REPORTS: Report[] = []
-
 function mapStatus(s: string): StatusType {
   const m: Record<string, StatusType> = {
     completed: 'Completed',

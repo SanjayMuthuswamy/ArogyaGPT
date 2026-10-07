@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ChangeEvent } from 'react'
 import AuthenticatedShell from '../components/layout/AuthenticatedShell'
 
 interface SettingsPageProps {
@@ -51,7 +51,19 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   )
 
   // Helper for inputs
-  const InputField = ({ label, type = "text", placeholder, value, onChange }: any) => (
+  const InputField = ({
+    label,
+    type = 'text',
+    placeholder,
+    value,
+    onChange,
+  }: {
+    label: string
+    type?: string
+    placeholder?: string
+    value: string
+    onChange?: (event: ChangeEvent<HTMLInputElement>) => void
+  }) => (
     <div>
       <label className="block text-[13px] font-medium text-gray-700 mb-2">{label}</label>
       <input
@@ -158,14 +170,14 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                     type="password" 
                     placeholder="••••••••••" 
                     value={currentPassword}
-                    onChange={(e: any) => setCurrentPassword(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentPassword(e.target.value)}
                   />
                   <InputField 
                     label="New Password" 
                     type="password" 
                     placeholder="••••••••••" 
                     value={newPassword}
-                    onChange={(e: any) => setNewPassword(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
                   />
                   
                   {/* Password Strength */}
@@ -189,7 +201,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                     type="password" 
                     placeholder="••••••••••" 
                     value={confirmPassword}
-                    onChange={(e: any) => setConfirmPassword(e.target.value)}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
                   />
                 </div>
                 
@@ -215,7 +227,7 @@ export default function SettingsPage({ onNavigate }: SettingsPageProps) {
                     {['light', 'dark', 'system'].map((t) => (
                       <button
                         key={t}
-                        onClick={() => setTheme(t as any)}
+                        onClick={() => setTheme(t as 'light' | 'dark' | 'system')}
                         className={`flex items-center gap-3 px-6 py-4 rounded-[16px] border ${theme === t ? 'border-[#16A34A] bg-[#16A34A]/5 ring-1 ring-[#16A34A]' : 'border-gray-200 bg-white hover:border-gray-300'} transition-all capitalize text-[15px] font-medium text-gray-900 w-full sm:w-auto`}
                       >
                         <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${theme === t ? 'border-[#16A34A]' : 'border-gray-300'}`}>

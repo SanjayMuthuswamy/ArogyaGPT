@@ -81,6 +81,41 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173).
 
+### Production with Docker Compose
+
+The Compose deployment serves the production Vite build with Nginx, proxies API
+requests to FastAPI, starts PostgreSQL and Redis, and applies Alembic migrations
+before starting the API and workers.
+
+1. Install Docker Engine with the Compose plugin.
+2. Copy `.env.example` to `.env` and replace every placeholder. Keep the
+   PostgreSQL password alphanumeric so it can be used safely in the database
+   URL, and make sure the password in `DATABASE_URL` matches
+   `POSTGRES_PASSWORD`.
+3. Copy `backend/.env.example` to `backend/.env`. Set the real AI provider key
+   and any other provider credentials there; do not use the development
+   defaults in production.
+4. Set `ALLOWED_HOSTS` and `CORS_ORIGINS` in the root `.env` to the actual
+   production hostnames, formatted as JSON arrays.
+5. Put the published port 80 behind a TLS-terminating load balancer or reverse
+   proxy. Do not expose the app publicly over plain HTTP.
+6. Start and check the services:
+
+   ```bash
+   docker compose config
+   docker compose up --build -d
+   docker compose ps
+   ```
+
+   The frontend health endpoint is `/healthz`; the API liveness endpoint is
+   `/health/live`. PostgreSQL and Redis are intentionally not published to the
+   host. Flower is bound to loopback only.
+
+The Compose stack is a self-hosted deployment baseline, not a substitute for
+production operations work: configure HTTPS, backups, monitoring, secret
+rotation, and durable/private storage appropriate to your hosting provider
+before handling real patient data.
+
 ---
 
 ## ⚙️ Environment Variables
