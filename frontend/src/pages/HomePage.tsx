@@ -6,12 +6,13 @@ import FAQSection from '../components/landing/FAQSection'
 
 interface HomePageProps {
   onNavigate: (page: string) => void
+  isLoggedIn?: boolean
 }
 
-export default function HomePage({ onNavigate }: HomePageProps) {
+export default function HomePage({ onNavigate, isLoggedIn }: HomePageProps) {
   return (
     <div className="flex flex-col min-h-screen bg-[#FAFAF8]">
-      <Hero onNavigate={onNavigate} />
+      <Hero onNavigate={onNavigate} isLoggedIn={isLoggedIn} />
       <FeaturesSection onNavigate={onNavigate} />
       <HowItWorks />
       <TestimonialsSection />

@@ -149,7 +149,7 @@ export default function App() {
       )}
 
       <main>
-        {page === 'home' && <HomePage onNavigate={navigate} />}
+        {page === 'home' && <HomePage onNavigate={navigate} isLoggedIn={isAuthenticated} />}
         {page === 'upload' && <UploadPage onNavigate={navigate} />}
         {page === 'report' && <ReportViewPage onNavigate={navigate} />}
         {page === 'signin' && <SignInPage onNavigate={navigate} onSignIn={handleAuthSuccess} />}
