@@ -107,9 +107,15 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
             {/* Summary card */}
             <div className="bg-bg-deep rounded-lg p-6 mb-6">
               <p className="font-body text-xs uppercase tracking-[0.1em] text-text-muted mb-3">Report Summary</p>
-              <p className="font-display text-lg italic text-text-inverse leading-[1.7] font-light">
-                "{activeSummary}"
-              </p>
+              <div 
+                className="font-display text-lg italic text-text-inverse leading-[1.7] font-light"
+                dangerouslySetInnerHTML={{ 
+                  __html: activeSummary
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br/>') 
+                }}
+              />
               <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/8">
                 <span className="font-body text-xs text-text-muted">Blood Report · June 2024</span>
                 <span className="font-body text-xs px-2 py-0.5 rounded-full bg-white/8 text-text-muted">
