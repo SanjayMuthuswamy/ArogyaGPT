@@ -257,9 +257,13 @@ export default function ChatPanel({ selectedLanguage, onLanguageChange }: ChatPa
                   className="px-4 py-3 rounded-xl font-body text-base text-text-primary
                                bg-bg-surface border border-[rgba(46,125,107,0.1)] leading-[1.7]"
                   style={{ borderBottomLeftRadius: 4 }}
-                >
-                  {msg.text}
-                </div>
+                  dangerouslySetInnerHTML={{ 
+                    __html: msg.text
+                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                      .replace(/\n/g, '<br/>') 
+                  }}
+                />
                 <div className="flex items-center gap-3 mt-2 pl-1">
                   <button
                     onClick={() => handleListenBubble(msg.id, msg.text)}

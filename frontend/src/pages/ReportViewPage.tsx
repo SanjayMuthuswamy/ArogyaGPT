@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import ReportPanel, { Section, Parameter } from '../components/report/ReportPanel'
+import ReportPanel, { Section, Parameter, Insight } from '../components/report/ReportPanel'
 import ChatPanel from '../components/chat/ChatPanel'
 import PdfExportContent from '../components/report/PdfExportContent'
 import { useSpeech } from '../hooks/useSpeech'
@@ -193,6 +193,7 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
         language={language}
         sections={activeSections}
         summary={activeSummary}
+        detailedText={reportData?.simplified_text || undefined}
         insights={activeInsights}
       />
 
@@ -229,22 +230,23 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
           <div className="flex items-center gap-2 flex-shrink-0">
 
             {/* Language selector */}
-            <button
-              onClick={() => {
-                const currentIndex = AVAILABLE_LANGUAGES.indexOf(language);
-                const nextIndex = (currentIndex + 1) % AVAILABLE_LANGUAGES.length;
-                setLanguage(AVAILABLE_LANGUAGES[nextIndex]);
-              }}
-              className="hidden md:flex items-center gap-1.5 font-body text-sm text-text-secondary
+            <div className="hidden md:flex items-center gap-1.5 font-body text-sm text-text-secondary
                          px-3 py-1.5 rounded-md border border-[rgba(46,125,107,0.15)]
-                         hover:border-brand-glow/40 transition-colors duration-fast min-h-[40px]"
-              aria-label="Change language"
-            >
-              {language}
-              <svg className="w-3 h-3" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                         hover:border-brand-glow/40 transition-colors duration-fast min-h-[40px] relative">
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="appearance-none bg-transparent outline-none cursor-pointer pr-4 text-text-secondary"
+                aria-label="Change language"
+              >
+                {AVAILABLE_LANGUAGES.map(lang => (
+                  <option key={lang} value={lang} className="text-text-primary bg-bg-surface">{lang}</option>
+                ))}
+              </select>
+              <svg className="w-3 h-3 absolute right-3 pointer-events-none" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                 <path d="M2 4 L6 8 L10 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
               </svg>
-            </button>
+            </div>
 
             {/* ── VOICE BUTTON ── */}
             <div className="relative group">
@@ -384,7 +386,12 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
                        ${mobileTab === 'chat' ? 'hidden md:flex' : 'flex'}`}
         >
           <div className="flex-1 overflow-y-auto scrollbar-thin p-4 md:p-6 lg:p-8">
-            <ReportPanel sections={activeSections} summary={activeSummary} />
+            <ReportPanel
+              sections={activeSections}
+              summary={activeSummary}
+              detailedText={reportData?.simplified_text || undefined}
+              insights={activeInsights}
+            />
           </div>
         </div>
 

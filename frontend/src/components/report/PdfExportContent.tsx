@@ -22,6 +22,7 @@ interface PdfExportContentProps {
   language: string
   sections: PdfSection[]
   summary: string
+  detailedText?: string
   insights: { icon: string; title: string; body: string }[]
 }
 
@@ -37,6 +38,7 @@ export default function PdfExportContent({
   language,
   sections,
   summary,
+  detailedText,
   insights,
 }: PdfExportContentProps) {
   const generatedAt = new Date().toLocaleString('en-IN', {
@@ -71,7 +73,7 @@ export default function PdfExportContent({
       }}>
         <div>
           <div style={{ fontFamily: "'Fraunces', Georgia, serif", fontSize: '22px', fontWeight: 500, color: '#F5F2EE', marginBottom: '4px' }}>
-            MedEase AI
+            ArogyaGPT
           </div>
           <div style={{ fontSize: '13px', color: '#8FA49E', letterSpacing: '0.04em' }}>
             Simplified Medical Report
@@ -152,51 +154,70 @@ export default function PdfExportContent({
               ))}
             </div>
 
-            {/* Parameter rows */}
-            {section.params.map(param => {
-              const colors = STATUS_COLORS[param.status]
-              return (
-                <div
-                  key={param.name}
-                  style={{
-                    background: colors.bg,
-                    borderLeft: param.status === 'critical' ? '3px solid #C0574A' : '3px solid transparent',
-                    borderBottomLeftRadius: 0,
-                    borderTopLeftRadius: 0,
-                    padding: '10px 0 10px 8px',
-                    borderBottom: '0.5px solid #E8E4DF',
-                  }}
-                >
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 100px', gap: '8px', alignItems: 'start' }}>
-                    {/* Name */}
-                    <div>
-                      <div style={{ fontSize: '13px', color: '#1A2420', fontWeight: 500 }}>{param.name}</div>
-                      <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#4A5E59', marginTop: '3px' }}>{param.plain}</div>
-                      <div style={{ fontSize: '12px', color: '#2E7D6B', marginTop: '2px' }}>{param.translation}</div>
-                    </div>
-                    {/* Value */}
-                    <div style={{ fontFamily: "'JetBrains Mono', Menlo, monospace", fontSize: '13px', fontWeight: 600, color: colors.text }}>
-                      {param.value} {param.unit}
-                      <div style={{ fontFamily: 'inherit', fontSize: '11px', color: '#8FA49E', fontWeight: 400 }}>Normal: {param.range}</div>
-                    </div>
-                    {/* Badge */}
-                    <div>
-                      <span style={{
-                        display: 'inline-block',
-                        fontSize: '11px',
-                        padding: '2px 10px',
-                        borderRadius: '99px',
-                        background: colors.badge,
-                        color: colors.badgeText,
-                        fontWeight: 500,
-                      }}>
-                        {param.status === 'normal' ? '✓ Normal' : param.status === 'warning' ? '~ Borderline' : '! High'}
-                      </span>
+            {/* Parameter rows or Detailed Text */}
+            {section.params.length === 0 && detailedText ? (
+              <div
+                style={{
+                  padding: '16px 20px',
+                  background: '#EEF5F2',
+                  borderRadius: '8px',
+                  color: '#1A2420',
+                  lineHeight: '1.7',
+                  fontSize: '13px'
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: detailedText
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br/>')
+                }}
+              />
+            ) : (
+              section.params.map(param => {
+                const colors = STATUS_COLORS[param.status]
+                return (
+                  <div
+                    key={param.name}
+                    style={{
+                      background: colors.bg,
+                      borderLeft: param.status === 'critical' ? '3px solid #C0574A' : '3px solid transparent',
+                      borderBottomLeftRadius: 0,
+                      borderTopLeftRadius: 0,
+                      padding: '10px 0 10px 8px',
+                      borderBottom: '0.5px solid #E8E4DF',
+                    }}
+                  >
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 100px', gap: '8px', alignItems: 'start' }}>
+                      {/* Name */}
+                      <div>
+                        <div style={{ fontSize: '13px', color: '#1A2420', fontWeight: 500 }}>{param.name}</div>
+                        <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#4A5E59', marginTop: '3px' }}>{param.plain}</div>
+                        <div style={{ fontSize: '12px', color: '#2E7D6B', marginTop: '2px' }}>{param.translation}</div>
+                      </div>
+                      {/* Value */}
+                      <div style={{ fontFamily: "'JetBrains Mono', Menlo, monospace", fontSize: '13px', fontWeight: 600, color: colors.text }}>
+                        {param.value} {param.unit}
+                        <div style={{ fontFamily: 'inherit', fontSize: '11px', color: '#8FA49E', fontWeight: 400 }}>Normal: {param.range}</div>
+                      </div>
+                      {/* Badge */}
+                      <div>
+                        <span style={{
+                          display: 'inline-block',
+                          fontSize: '11px',
+                          padding: '2px 10px',
+                          borderRadius: '99px',
+                          background: colors.badge,
+                          color: colors.badgeText,
+                          fontWeight: 500,
+                        }}>
+                          {param.status === 'normal' ? '✓ Normal' : param.status === 'warning' ? '~ Borderline' : '! High'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
         ))}
       </div>
@@ -243,7 +264,7 @@ export default function PdfExportContent({
         gap: '12px',
         marginTop: '8px',
       }}>
-        <div style={{ fontSize: '11px', color: '#8FA49E' }}>Generated by MedEase AI</div>
+        <div style={{ fontSize: '11px', color: '#8FA49E' }}>Generated by ArogyaGPT</div>
         <div style={{ fontSize: '11px', color: '#8FA49E', fontStyle: 'italic', textAlign: 'center', lineHeight: '1.5' }}>
           This report is for informational purposes only.<br />
           Consult your doctor for medical advice.

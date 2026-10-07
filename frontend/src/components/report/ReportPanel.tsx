@@ -20,11 +20,19 @@ export interface Section {
   params: Parameter[]
 }
 
+export interface Insight {
+  icon: string
+  title: string
+  body: string
+}
+
 const REPORT_DATA: Section[] = []
 
 interface ReportPanelProps {
   sections?: Section[]
   summary?: string
+  detailedText?: string
+  insights?: Insight[]
 }
 
 const StatusBadge = ({ status }: { status: Status }) => {
@@ -58,12 +66,12 @@ const RangeBar = ({ min, max, value }: { min: number; max: number; value: number
 
 type ReportTab = 'simplified' | 'values' | 'insights'
 
-export default function ReportPanel({ sections: propSections, summary: propSummary }: ReportPanelProps = {}) {
+export default function ReportPanel({ sections: propSections, summary: propSummary, detailedText, insights: propInsights = [] }: ReportPanelProps = {}) {
   const activeData = propSections && propSections.length > 0 ? propSections : REPORT_DATA
   const activeSummary = propSummary || 'Your medical report has been processed by ArogyaGPT. Please review your laboratory findings and clinical parameters.'
 
   const [activeTab, setActiveTab] = useState<ReportTab>('simplified')
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ 'Complete Blood Count': true })
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({ 'Complete Blood Count': true, 'Diagnostic Report': true, 'Laboratory Findings': true })
   const [filter, setFilter] = useState<'all' | Status>('all')
 
   const toggleSection = (name: string) =>
@@ -72,6 +80,17 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
   const allParams = activeData.flatMap(s => s.params)
   const filtered = filter === 'all' ? allParams : allParams.filter(p => p.status === filter)
 
+  // Compute lab-based insights from abnormal params
+  const labInsights: Insight[] = allParams
+    .filter(p => p.status !== 'normal')
+    .map(p => ({
+      icon: p.status === 'critical' ? '🚨' : '⚠️',
+      title: `${p.name} is ${p.status === 'critical' ? 'Outside Standard Range' : 'Borderline'}`,
+      body: `Recorded value: ${p.value} ${p.unit} (Reference: ${p.range}). ${p.plain}`,
+    }))
+
+  // Merge: backend abnormalities (propInsights) take priority; if lab insights also exist, combine
+  const allInsights: Insight[] = propInsights.length > 0 ? propInsights : labInsights
 
   return (
     <div className="flex flex-col h-full">
@@ -107,15 +126,15 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
             {/* Summary card */}
             <div className="bg-bg-deep rounded-lg p-6 mb-6">
               <p className="font-body text-xs uppercase tracking-[0.1em] text-text-muted mb-3">Report Summary</p>
-              <p className="font-display text-lg italic text-text-inverse leading-[1.7] font-light">
-                "{activeSummary}"
-              </p>
-              <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/8">
-                <span className="font-body text-xs text-text-muted">Blood Report · June 2024</span>
-                <span className="font-body text-xs px-2 py-0.5 rounded-full bg-white/8 text-text-muted">
-                  CBC + Metabolic
-                </span>
-              </div>
+              <div
+                className="font-display text-lg italic text-text-inverse leading-[1.7] font-light"
+                dangerouslySetInnerHTML={{
+                  __html: activeSummary
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/\n/g, '<br/>')
+                }}
+              />
             </div>
 
             {/* Sections */}
@@ -134,8 +153,8 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
                         <span className="font-body text-lg font-semibold text-text-primary">{section.name}</span>
                         <span className={`font-body text-xs px-2.5 py-1 rounded-full
                           ${abnormal > 0 ? 'bg-status-warning/10 text-status-warning' : 'bg-status-normal/10 text-status-normal'}`}>
-                          {section.params.length === 0 
-                            ? 'Diagnostic Report' 
+                          {section.params.length === 0
+                            ? 'Diagnostic Report'
                             : `${section.params.length} values · ${abnormal > 0 ? `${abnormal} abnormal` : 'all normal'}`}
                         </span>
                       </div>
@@ -148,32 +167,44 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
 
                     {isOpen && (
                       <div className="px-4 pb-4 space-y-3 border-t border-[rgba(46,125,107,0.06)]">
-                        {section.params.map(param => (
+                        {section.params.length === 0 && detailedText ? (
                           <div
-                            key={param.name}
-                            className={`rounded-lg p-4 ${param.status === 'critical' ? 'row-critical' : 'bg-bg-base/60'}`}
-                          >
-                            <div className="flex items-start justify-between gap-3 mb-2">
-                              <div className="flex items-center gap-2">
-                                {param.status === 'critical' && (
-                                  <span className="text-status-critical font-bold text-base" aria-label="Critical value">!</span>
-                                )}
-                                <span className="font-body text-base font-medium text-text-primary">{param.name}</span>
+                            className="p-4 bg-bg-base/60 rounded-lg font-body text-base text-text-primary leading-[1.7]"
+                            dangerouslySetInnerHTML={{
+                              __html: detailedText
+                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                .replace(/\n/g, '<br/>')
+                            }}
+                          />
+                        ) : (
+                          section.params.map(param => (
+                            <div
+                              key={param.name}
+                              className={`rounded-lg p-4 ${param.status === 'critical' ? 'row-critical' : 'bg-bg-base/60'}`}
+                            >
+                              <div className="flex items-start justify-between gap-3 mb-2">
+                                <div className="flex items-center gap-2">
+                                  {param.status === 'critical' && (
+                                    <span className="text-status-critical font-bold text-base" aria-label="Critical value">!</span>
+                                  )}
+                                  <span className="font-body text-base font-medium text-text-primary">{param.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className={`font-mono text-base font-semibold
+                                    ${param.status === 'critical' ? 'text-status-critical'
+                                      : param.status === 'warning' ? 'text-status-warning'
+                                      : 'text-text-primary'}`}>
+                                    {param.value} {param.unit}
+                                  </span>
+                                  <StatusBadge status={param.status} />
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className={`font-mono text-base font-semibold
-                                  ${param.status === 'critical' ? 'text-status-critical'
-                                    : param.status === 'warning' ? 'text-status-warning'
-                                    : 'text-text-primary'}`}>
-                                  {param.value} {param.unit}
-                                </span>
-                                <StatusBadge status={param.status} />
-                              </div>
+                              <p className="font-body text-sm italic text-text-secondary leading-[1.6] mb-1">{param.plain}</p>
+                              <p className="font-body text-sm text-brand-secondary">{param.translation}</p>
                             </div>
-                            <p className="font-body text-sm italic text-text-secondary leading-[1.6] mb-1">{param.plain}</p>
-                            <p className="font-body text-sm text-brand-secondary">{param.translation}</p>
-                          </div>
-                        ))}
+                          ))
+                        )}
                       </div>
                     )}
                   </div>
@@ -247,46 +278,32 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
             )}
           </div>
         )}
+
         {/* TAB 3: Health Insights */}
         {activeTab === 'insights' && (
           <div id="tabpanel-insights" role="tabpanel" aria-label="Health insights" className="space-y-4">
-            {(() => {
-              const abnormalParams = activeData.flatMap((s: Section) => s.params).filter((p: Parameter) => p.status !== 'normal')
-              if (abnormalParams.length === 0) {
-                if (allParams.length === 0) {
-                  return (
-                    <div className="bg-bg-surface rounded-lg border border-[rgba(46,125,107,0.1)] p-6 text-center mt-4">
-                      <p className="text-2xl mb-2">📄</p>
-                      <h3 className="font-display font-medium text-text-primary text-base mb-1">No Structured Data to Analyze</h3>
-                      <p className="text-sm text-text-muted max-w-md mx-auto">
-                        This document does not contain tabular health data for automated insight generation. Please refer to the Simplified Report and Chat for insights.
-                      </p>
-                    </div>
-                  )
-                }
-                return (
-                  <div className="bg-bg-surface rounded-lg border border-[rgba(46,125,107,0.1)] p-6 text-center">
-                    <p className="text-2xl mb-2">✅</p>
-                    <h3 className="font-display font-medium text-text-primary text-base mb-1">No Abnormal Parameters Flagged</h3>
-                    <p className="text-sm text-text-muted max-w-md mx-auto">
-                      All measured tests in this report fall within standard clinical reference intervals. Review with your healthcare provider for clinical correlation.
-                    </p>
-                  </div>
-                )
-              }
-              return abnormalParams.map((p: Parameter) => (
+            {allInsights.length === 0 ? (
+              <div className="bg-bg-surface rounded-lg border border-[rgba(46,125,107,0.1)] p-6 text-center mt-4">
+                <p className="text-2xl mb-2">✅</p>
+                <h3 className="font-display font-medium text-text-primary text-base mb-1">No Abnormal Findings</h3>
+                <p className="text-sm text-text-muted max-w-md mx-auto">
+                  No critical or abnormal findings were flagged in this report. Consult your doctor for a complete clinical interpretation.
+                </p>
+              </div>
+            ) : (
+              allInsights.map((insight, i) => (
                 <InsightCard
-                  key={p.name}
-                  icon={p.status === 'critical' ? '🚨' : '⚠️'}
-                  title={`${p.name} is ${p.status === 'critical' ? 'Outside Standard Range' : 'Borderline'}`}
-                  body={`Recorded value: ${p.value} ${p.unit} (Reference: ${p.range}). ${p.plain}`}
+                  key={`${insight.title}-${i}`}
+                  icon={insight.icon}
+                  title={insight.title}
+                  body={insight.body}
                   sections={[
-                    { q: 'Clinical Significance', a: p.plain },
-                    { q: 'Recommended Action', a: 'Discuss this parameter with your physician to evaluate trends against your symptoms and medical history.' },
+                    { q: 'Clinical Significance', a: insight.body },
+                    { q: 'Recommended Action', a: 'Discuss this finding with your physician for clinical evaluation and treatment guidance.' },
                   ]}
                 />
               ))
-            })()}
+            )}
           </div>
         )}
       </div>
@@ -303,7 +320,15 @@ function InsightCard({ icon, title, body, sections }: {
     <div className="bg-bg-surface rounded-lg shadow-card border border-[rgba(46,125,107,0.08)] p-6 card-hover">
       <div className="text-4xl mb-4" aria-hidden="true">{icon}</div>
       <h3 className="font-display text-xl font-medium text-text-primary mb-3 tracking-[-0.01em]">{title}</h3>
-      <p className="font-body text-md text-text-secondary leading-[1.7] mb-5">{body}</p>
+      <p
+        className="font-body text-md text-text-secondary leading-[1.7] mb-5"
+        dangerouslySetInnerHTML={{
+          __html: body
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br/>')
+        }}
+      />
       <div className="space-y-2">
         {sections.map((s, i) => (
           <div key={s.q} className="border-t border-[rgba(46,125,107,0.08)] pt-3">

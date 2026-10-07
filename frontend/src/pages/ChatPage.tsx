@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import AuthenticatedShell from '../components/layout/AuthenticatedShell'
-import { api } from '../services/api'
+import { api, ReportDetail } from '../services/api'
 
 interface ChatPageProps {
   onNavigate: (page: string) => void
@@ -21,7 +21,6 @@ interface ChatSession {
   category: 'Today' | 'Yesterday' | 'Older'
 }
 
-const mockHistory: ChatSession[] = []
 
 const suggestedQuestions = [
   'Summarize this report',
@@ -36,12 +35,65 @@ export default function ChatPage({ onNavigate }: ChatPageProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isTyping, setIsTyping] = useState(false)
-  const [activeSession, setActiveSession] = useState<string | null>('1')
+  const [activeSession, setActiveSession] = useState<string | null>(() => localStorage.getItem('activeReportId'))
   const [searchQuery, setSearchQuery] = useState('')
   const [showInsightPanel, setShowInsightPanel] = useState(true)
   const [chatLanguage, setChatLanguage] = useState<'ta' | 'en' | 'hi' | 'te' | 'kn' | 'ml' | 'bn'>('ta')
+  
+  const [reportData, setReportData] = useState<ReportDetail | null>(null)
+  const [history, setHistory] = useState<ChatSession[]>([])
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  // Fetch report list
+  useEffect(() => {
+    let active = true
+    api.listReports({ per_page: 50 }).then(data => {
+      if (!active) return
+      const sessions = data.items.map(r => {
+        const dateObj = new Date(r.created_at)
+        const today = new Date()
+        let cat: 'Today' | 'Yesterday' | 'Older' = 'Older'
+        if (dateObj.toDateString() === today.toDateString()) cat = 'Today'
+        else {
+          const yest = new Date()
+          yest.setDate(yest.getDate() - 1)
+          if (dateObj.toDateString() === yest.toDateString()) cat = 'Yesterday'
+        }
+        return {
+          id: r.id,
+          title: r.title || 'Medical Report',
+          date: dateObj.toLocaleDateString(),
+          reportType: r.report_type || 'Diagnostic Report',
+          category: cat
+        }
+      })
+      setHistory(sessions)
+      if (!activeSession && sessions.length > 0) {
+        setActiveSession(sessions[0].id)
+      }
+    }).catch(err => console.warn('Failed to fetch history:', err))
+    return () => { active = false }
+  }, [])
+
+  // Fetch active report details
+  useEffect(() => {
+    if (!activeSession) return
+    let active = true
+    const fetchReport = async () => {
+      try {
+        const data = await api.getReport(activeSession)
+        if (active) {
+          setReportData(data)
+          localStorage.setItem('activeReportId', activeSession)
+        }
+      } catch (err) {
+        console.warn('Could not load report details in ChatPage:', err)
+      }
+    }
+    fetchReport()
+    return () => { active = false }
+  }, [activeSession])
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -62,7 +114,7 @@ export default function ChatPage({ onNavigate }: ChatPageProps) {
     }
   }, [activeSession])
 
-  const filteredHistory = mockHistory.filter((session) =>
+  const filteredHistory = history.filter((session) =>
     session.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     session.reportType.toLowerCase().includes(searchQuery.toLowerCase())
   )
@@ -212,7 +264,7 @@ export default function ChatPage({ onNavigate }: ChatPageProps) {
               <header className="z-10 flex shrink-0 flex-col justify-between gap-3 border-b border-gray-100 bg-white px-4 py-3 sm:flex-row sm:items-center sm:px-5">
                 <div className="min-w-0">
                   <div className="mb-1 flex min-w-0 items-center gap-2">
-                    <h2 className="truncate font-display text-base font-bold text-gray-950">CBC Report - July 24</h2>
+                    <h2 className="truncate font-display text-base font-bold text-gray-950">{reportData?.title || 'Medical Report'}</h2>
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                       Live AI Agent
@@ -223,10 +275,10 @@ export default function ChatPage({ onNavigate }: ChatPageProps) {
                       <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
-                      Verified OCR Extraction
+                      Verified Extraction
                     </span>
                     <span className="text-gray-300">|</span>
-                    <span className="font-medium">14 Analytes Processed</span>
+                    <span className="font-medium">{reportData?.lab_results?.length || 0} Parameters Processed</span>
                   </div>
                 </div>
 
@@ -255,25 +307,33 @@ export default function ChatPage({ onNavigate }: ChatPageProps) {
                     <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
                       <div className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm">
                         <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Report Profile</p>
-                        <p className="truncate text-sm font-bold text-gray-900">Complete Blood Count</p>
+                        <p className="truncate text-sm font-bold text-gray-900">{reportData?.report_type || 'Diagnostic Report'}</p>
                       </div>
                       <div className="rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm">
-                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Lab / Provider</p>
-                        <p className="truncate text-sm font-semibold text-gray-800">Apollo Diagnostic Center</p>
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-gray-500">Date</p>
+                        <p className="truncate text-sm font-semibold text-gray-800">{reportData?.report_date || 'N/A'}</p>
                       </div>
                       <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
                         <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">Attention</p>
-                        <p className="truncate text-sm font-bold text-amber-700">1 Parameter High</p>
+                        <p className="truncate text-sm font-bold text-amber-700">
+                          {reportData?.abnormalities?.length ? `${reportData.abnormalities.length} Abnormalities` : 'Normal'}
+                        </p>
                       </div>
                       <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
-                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-red-700">Flagged Value</p>
-                        <p className="truncate text-sm font-bold text-red-600">138 mg/dL Glucose</p>
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-red-700">Highest Risk</p>
+                        <p className="truncate text-sm font-bold text-red-600">
+                          {reportData?.abnormalities && reportData.abnormalities.length > 0
+                            ? reportData.abnormalities[0].parameter_name
+                            : 'None Detected'}
+                        </p>
                       </div>
                     </div>
-                    <div className="rounded-xl border border-[#DCEBE6] bg-white px-4 py-3 text-sm leading-relaxed text-[#2A4941] shadow-sm">
-                      <span className="mr-2 font-bold text-[#18322D]">Quick Summary:</span>
-                      All haematological counts are within standard limits. Fasting blood sugar is elevated, so HbA1c screening or glucose monitoring may be useful.
-                    </div>
+                    {reportData?.summary && (
+                      <div className="rounded-xl border border-[#DCEBE6] bg-white px-4 py-3 text-sm leading-relaxed text-[#2A4941] shadow-sm">
+                        <span className="mr-2 font-bold text-[#18322D]">Quick Summary:</span>
+                        {reportData.summary}
+                      </div>
+                    )}
                   </div>
                 )}
 
