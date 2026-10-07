@@ -152,10 +152,10 @@ export default function Navbar({ onNavigate, currentPage, isLoggedIn, onLogout }
               </button>
             ) : (
               <button
-                onClick={() => handleNavigate('signin')}
+                onClick={() => handleNavigate(currentPage === 'signin' ? 'signup' : 'signin')}
                 className="hidden rounded-full border border-[#DCEBE6] bg-white px-5 py-2 text-sm font-semibold text-[#18322D] hover:bg-[#FAFAF8] transition duration-200 md:inline-flex"
               >
-                Sign In
+                {currentPage === 'signin' ? 'Create Account' : 'Sign In'}
               </button>
             )}
 
@@ -209,10 +209,10 @@ export default function Navbar({ onNavigate, currentPage, isLoggedIn, onLogout }
                 </button>
               ) : (
                 <button
-                  onClick={() => handleNavigate('signin')}
+                  onClick={() => handleNavigate(currentPage === 'signin' ? 'signup' : 'signin')}
                   className="rounded-2xl px-4 py-3 text-left font-body text-sm font-medium text-[#1D9E75] transition hover:bg-[#E1F5EE]"
                 >
-                  Sign In
+                  {currentPage === 'signin' ? 'Create Account' : 'Sign In'}
                 </button>
               )}
             </div>

@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database.session import get_db
 from app.cache.redis_manager import RedisManager, get_redis
+from app.core.config import settings
 from app.core.security import decode_token
 from app.core.exceptions import (
     AuthenticationError,
@@ -105,7 +106,7 @@ async def get_current_verified_user(
     Raises:
         EmailNotVerifiedError: If user hasn't verified their email.
     """
-    if not current_user.is_email_verified:
+    if settings.EMAIL_ENABLED and not current_user.is_email_verified:
         raise EmailNotVerifiedError()
     return current_user
 

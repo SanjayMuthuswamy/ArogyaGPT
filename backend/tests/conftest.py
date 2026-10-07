@@ -20,7 +20,6 @@ from app.core.constants import UserRole
 # Use in-memory SQLite for tests (no PostgreSQL required for unit tests)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-
 @pytest.fixture(scope="session")
 def event_loop():
     """Create a single event loop for all tests."""

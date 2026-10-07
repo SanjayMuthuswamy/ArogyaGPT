@@ -107,7 +107,7 @@ class AuthService:
             phone_number=data.phone_number,
             gender=data.gender,
             is_active=True,
-            is_email_verified=False,  # Must verify email
+            is_email_verified=not settings.EMAIL_ENABLED,
         )
         self.db.add(user)
         await self.db.flush()  # Get the ID without committing
@@ -181,7 +181,7 @@ class AuthService:
             raise AuthenticationError("Account is deactivated. Please contact support.")
 
         # Email verification check
-        if not user.is_email_verified:
+        if settings.EMAIL_ENABLED and not user.is_email_verified:
             raise EmailNotVerifiedError()
 
         # Reset failed attempts & update last login

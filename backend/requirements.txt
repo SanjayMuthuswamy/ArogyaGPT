@@ -74,7 +74,7 @@ beautifulsoup4==4.12.3
 lxml==5.2.2
 
 # --- Translation ---
-googletrans==4.0.0rc1
+# googletrans==4.0.0rc1
 deep-translator==1.11.4
 
 # --- Text-to-Speech ---

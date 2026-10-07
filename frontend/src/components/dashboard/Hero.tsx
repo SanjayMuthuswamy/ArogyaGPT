@@ -26,8 +26,8 @@ export default function Hero({ onNavigate }: HeroProps) {
         }}
       />
 
-      <div className="relative mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:px-12 lg:px-16 lg:py-20">
-        <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-12">
+      <div className="relative mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16 md:px-12 lg:px-16 lg:py-20 2xl:px-20">
+        <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-12 2xl:gap-16">
           {/* Left Column: Heading & CTAs */}
           <div ref={heroRef} className="lg:col-span-7">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#DCEBE6] bg-white/80 px-4 py-1.5 font-body text-xs font-semibold tracking-wide text-[#1D9E75] shadow-[0_4px_16px_rgba(29,158,117,0.08)] mb-6">
@@ -45,7 +45,7 @@ export default function Hero({ onNavigate }: HeroProps) {
               </span>
             </h1>
 
-            <p className="mb-8 max-w-[620px] font-body text-base leading-relaxed text-[#4A5E59] sm:text-lg">
+            <p className="mb-8 max-w-[720px] font-body text-base leading-relaxed text-[#4A5E59] sm:text-lg 2xl:text-xl">
               Upload your medical reports, simplify complex medical terminology, chat with your reports using AI, and understand your health with confidence.
             </p>
 
@@ -82,7 +82,7 @@ export default function Hero({ onNavigate }: HeroProps) {
 
           {/* Right Column: Hero Graphic Card */}
           <div className="relative flex justify-center lg:col-span-5 lg:justify-end">
-            <div className="relative w-full max-w-[440px] animate-[float_6s_ease-in-out_infinite]">
+            <div className="relative w-full max-w-[440px] animate-[float_6s_ease-in-out_infinite] 2xl:max-w-[520px]">
               {/* Outer Glow */}
               <div className="absolute -inset-4 rounded-[36px] bg-gradient-to-r from-[#1D9E75]/20 to-[#059669]/20 blur-2xl opacity-60 pointer-events-none" />
 

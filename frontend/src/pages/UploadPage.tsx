@@ -1,399 +1,416 @@
-import { useState, useEffect } from 'react'
+import { useCallback, useRef, useState, type DragEvent } from 'react'
 import AuthenticatedShell from '../components/layout/AuthenticatedShell'
+import { api } from '../services/api'
+
+const LANGUAGES = [
+  { code: 'ta', native: 'தமிழ்', english: 'Tamil', flag: '🇮🇳' },
+  { code: 'hi', native: 'हिन्दी', english: 'Hindi', flag: '🇮🇳' },
+  { code: 'te', native: 'తెలుగు', english: 'Telugu', flag: '🇮🇳' },
+  { code: 'kn', native: 'ಕನ್ನಡ', english: 'Kannada', flag: '🇮🇳' },
+  { code: 'ml', native: 'മലയാളം', english: 'Malayalam', flag: '🇮🇳' },
+  { code: 'bn', native: 'বাংলা', english: 'Bengali', flag: '🇮🇳' },
+]
+
+const PROCESSING_STEPS = [
+  'Reading medical document structural layout & OCR...',
+  'Extracting analyte values & biochemical anomalies...',
+  'AI clinical verification & risk stratification...',
+  'Generating multi-lingual plain language explanations...',
+]
 
 interface UploadPageProps {
   onNavigate: (page: string) => void
 }
 
-type UploadState = 'idle' | 'uploading' | 'analyzing' | 'complete'
-
-const mockRecentUploads = [
-  { name: 'Blood_Report_July2026.pdf', size: '2.4 MB', date: 'Jul 24', status: 'Analyzed', type: 'PDF' },
-  { name: 'Lipid_Panel_Scan.jpg', size: '1.8 MB', date: 'Jul 20', status: 'Analyzed', type: 'IMG' },
-  { name: 'Thyroid_Test_Lab.docx', size: '940 KB', date: 'Jul 15', status: 'Analyzed', type: 'DOCX' },
-]
-
 export default function UploadPage({ onNavigate }: UploadPageProps) {
-  const [dragActive, setDragActive] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploadState, setUploadState] = useState<UploadState>('idle')
-  const [progress, setProgress] = useState(0)
-  const [analysisStep, setAnalysisStep] = useState(0)
+  const [dragOver, setDragOver] = useState(false)
+  const [file, setFile] = useState<File | null>(null)
+  const [language, setLanguage] = useState('ta')
+  const [processing, setProcessing] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [processStep, setProcessStep] = useState(-1)
+  const [uploadError, setUploadError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleDrag = (e: React.DragEvent) => {
+  const handleFile = useCallback((f: File) => {
+    if (!f) return
+    setFile(f)
+    setUploadProgress(0)
+    let p = 0
+    const t = window.setInterval(() => {
+      p += Math.random() * 25
+      if (p >= 100) {
+        p = 100
+        window.clearInterval(t)
+      }
+      setUploadProgress(Math.min(p, 100))
+    }, 120)
+  }, [])
+
+  const onDrop = useCallback((e: DragEvent) => {
     e.preventDefault()
-    e.stopPropagation()
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true)
-    } else if (e.type === 'dragleave') {
-      setDragActive(false)
-    }
-  }
+    setDragOver(false)
+    const f = e.dataTransfer.files[0]
+    if (f) handleFile(f)
+  }, [handleFile])
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragActive(false)
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      startUploadSequence(e.dataTransfer.files[0])
-    }
-  }
+  const handleSubmit = async () => {
+    if (!file) return
+    setProcessing(true)
+    setUploadError('')
+    setProcessStep(0)
+    try {
+      const report = await api.uploadReport(file, {
+        title: file.name.replace(/\.[^/.]+$/, ''),
+        report_type: 'Lab Report',
+        preferred_language: language,
+      })
+      localStorage.setItem('activeReportId', report.id)
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      startUploadSequence(e.target.files[0])
-    }
-  }
+      // Animate progress steps while polling status
+      setProcessStep(1)
 
-  const startUploadSequence = (file: File) => {
-    setSelectedFile(file)
-    setUploadState('uploading')
-    setProgress(0)
-    setAnalysisStep(0)
-  }
+      let finished = false
+      let attempts = 0
+      while (!finished && attempts < 60) {
+        attempts++
+        await new Promise((r) => window.setTimeout(r, 1000))
+        if (attempts === 2) setProcessStep(2)
+        if (attempts === 5) setProcessStep(3)
 
-  // Effect to handle simulation sequences
-  useEffect(() => {
-    if (uploadState === 'uploading') {
-      const timer = setInterval(() => {
-        setProgress(p => {
-          if (p >= 100) {
-            clearInterval(timer)
-            setUploadState('analyzing')
-            return 100
+        try {
+          const statusCheck = await api.getReport(report.id)
+          if (statusCheck.status === 'completed') {
+            finished = true
+            break
+          } else if (statusCheck.status === 'failed') {
+            throw new Error('AI analysis failed to extract readable laboratory data from this file.')
           }
-          return p + 5
-        })
-      }, 100)
-      return () => clearInterval(timer)
-    }
+        } catch (e: any) {
+          if (e.message && e.message.includes('AI analysis failed')) {
+            throw e
+          }
+          // Report may still be processing, keep polling
+        }
+      }
 
-    if (uploadState === 'analyzing') {
-      const timers = [
-        setTimeout(() => setAnalysisStep(1), 800),
-        setTimeout(() => setAnalysisStep(2), 2000),
-        setTimeout(() => setAnalysisStep(3), 3500),
-        setTimeout(() => setAnalysisStep(4), 5000),
-        setTimeout(() => setUploadState('complete'), 6000),
-      ]
-      return () => timers.forEach(t => clearTimeout(t))
+      if (!finished) {
+        throw new Error('Analysis is taking longer than usual. Please check the History tab in a few moments.')
+      }
+
+      setProcessStep(PROCESSING_STEPS.length - 1)
+      window.setTimeout(() => onNavigate('report'), 500)
+    } catch (err: any) {
+      console.error('Upload failed:', err)
+      setProcessing(false)
+      setUploadError(
+        err.response?.data?.message || err.response?.data?.detail || err.message || 'Failed to upload and process report.'
+      )
     }
-  }, [uploadState])
+  }
+
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
 
   return (
     <AuthenticatedShell
-      title="Upload Report"
-      subtitle="Upload a medical report for AI-powered analysis and summarization."
+      title="Upload Health Report"
+      subtitle="Analyze blood work, scans, or pathology sheets with secure medical intelligence."
       onNavigate={onNavigate}
       currentPage="upload"
     >
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Column: Upload Workflow (70%) */}
-        <div className="lg:col-span-8 space-y-6">
-          
-          {uploadState === 'idle' && (
-            <div className="animate-fade-in">
-              <div
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-                className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-12 text-center transition-all duration-300 ${
-                  dragActive
-                    ? 'border-[#1D9E75] bg-[#E1F5EE]/30 scale-[1.02] shadow-sm'
-                    : 'border-gray-300 bg-white hover:border-[#1D9E75]/60 hover:bg-gray-50'
-                }`}
-              >
-                <input
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png,.docx"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 z-10 opacity-0 cursor-pointer w-full h-full"
-                />
-
-                <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gray-50 text-[#1D9E75] shadow-sm ring-4 ring-gray-50/50 transition-transform duration-300 group-hover:scale-110">
-                  <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                </div>
-
-                <h2 className="font-display text-2xl font-bold text-gray-900 mb-2">
-                  Upload your medical report
-                </h2>
-                <p className="font-body text-sm text-gray-500 mb-6">
-                  Drag & drop your PDF or image, or browse from your device.
-                </p>
-
-                <div className="flex flex-col gap-3 mb-8 w-full max-w-xs">
-                  <div className="flex justify-between items-center text-xs font-medium text-gray-400">
-                    <span>Supported formats:</span>
-                    <span className="text-gray-700">PDF • JPG • PNG • DOCX</span>
-                  </div>
-                  <div className="flex justify-between items-center text-xs font-medium text-gray-400">
-                    <span>Maximum file size:</span>
-                    <span className="text-gray-700">25 MB</span>
-                  </div>
-                </div>
-
-                <button className="rounded-xl bg-[#1D9E75] px-8 py-3 font-body text-sm font-semibold text-white shadow-sm hover:bg-[#168562] transition-colors relative z-20 pointer-events-none">
-                  Choose File
-                </button>
+      <div className="max-w-7xl mx-auto px-1">
+        {!processing ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            {/* Left Side: Upload Zone & Settings */}
+            <div className="lg:col-span-8 space-y-6">
+              
+              {/* Card Container */}
+              <div className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-sm">
                 
-                <p className="mt-4 text-xs text-[#1D9E75] font-medium hover:underline cursor-pointer relative z-20" onClick={() => onNavigate('history')}>
-                  Browse recent reports
-                </p>
+                {/* Header inside Upload */}
+                <div className="mb-6 flex items-center justify-between border-b border-gray-100 pb-4">
+                  <div>
+                    <h3 className="font-display text-lg font-bold text-[#18322D]">Medical Report Importer</h3>
+                    <p className="text-xs text-gray-500 font-body mt-0.5">Upload a single lab report to begin processing</p>
+                  </div>
+                  <span className="rounded-full bg-[#E1F5EE] px-3 py-1 font-body text-xs font-semibold text-[#1D9E75]">
+                    Step 1 of 2
+                  </span>
+                </div>
+
+                {uploadError && (
+                  <div className="mb-4 rounded-xl bg-red-50 border border-red-200 p-3 text-xs font-semibold text-red-700">
+                    ⚠️ {uploadError}
+                  </div>
+                )}
+
+                {/* Drop zone */}
+                <div
+                  onClick={() => !file && fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                  onDragLeave={() => setDragOver(false)}
+                  onDrop={onDrop}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Upload zone — drag and drop or click to browse"
+                  onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
+                  className={`relative flex h-[320px] w-full cursor-pointer select-none flex-col items-center justify-center rounded-2xl border-2 p-6 transition-all duration-300 ${
+                    dragOver
+                      ? 'border-[#1D9E75] bg-[#E8F7F2] shadow-[0_16px_40px_rgba(29,158,117,0.12)] scale-[0.99]'
+                      : file
+                        ? 'border-[#9AD8C7] bg-white shadow-sm'
+                        : 'border-dashed border-[#A8DCCB] bg-white hover:border-[#1D9E75] hover:bg-[#F5FCF8]/40 hover:shadow-[0_8px_30px_rgba(24,50,45,0.02)]'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="sr-only"
+                    aria-label="Choose file"
+                    onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+                  />
+
+                  {file ? (
+                    <div className="flex w-full flex-col items-center gap-5 px-4 text-center">
+                      <div className="relative">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#FFF8E6] shadow-inner">
+                          <svg className="h-8 w-8 text-[#E6A817]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                          </svg>
+                        </div>
+                        <span className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white text-[10px] font-bold shadow-md">✓</span>
+                      </div>
+                      
+                      <div className="max-w-md">
+                        <p className="mb-1 truncate font-body text-base font-bold text-[#18322D]">{file.name}</p>
+                        <p className="font-mono text-xs text-[#8FA49E] tracking-wider uppercase">{formatBytes(file.size)}</p>
+                      </div>
+
+                      <div className="w-full max-w-[340px] space-y-2">
+                        <div className="h-2.5 w-full overflow-hidden rounded-full bg-[#E7F5EF] p-[2px]">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] transition-all duration-300 shadow-sm"
+                            style={{ width: `${uploadProgress}%` }}
+                            role="progressbar"
+                            aria-valuenow={uploadProgress}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                          />
+                        </div>
+                        <p className="text-[11px] text-gray-400 font-semibold">{Math.round(uploadProgress)}% uploaded</p>
+                      </div>
+
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setFile(null); setUploadProgress(0) }}
+                        className="font-body text-xs font-bold text-[#4A5E59] hover:text-[#E84040] transition-colors border border-gray-200 hover:border-red-200 bg-white hover:bg-red-50/50 px-4 py-1.5 rounded-full shadow-sm"
+                        aria-label="Remove selected file"
+                      >
+                        Remove and select another
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-4 px-8 text-center">
+                      <div className="rounded-full bg-[#E8F7F2] p-4 text-[#1D9E75] shadow-inner transition-transform duration-300 hover:scale-105">
+                        <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-display text-lg font-bold text-[#18322D]">Drag & drop your health report here</p>
+                        <p className="font-body text-sm text-[#5C6E69] mt-1">or click to browse local files on your device</p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-2">
+                        {['PDF', 'JPG', 'PNG'].map((t) => (
+                          <span key={t} className="rounded-md border border-[#DCEBE6] bg-[#F9FCFA] px-2.5 py-1 font-mono text-[10px] font-bold text-[#4A5E59] shadow-sm">
+                            {t}
+                          </span>
+                        ))}
+                        <span className="text-[11px] text-gray-400 font-medium ml-1">Limit 10MB per file</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
               </div>
 
-              {/* Upload Tips */}
-              <div className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-                <h4 className="font-display text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                  💡 Tips for better results
-                </h4>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    'Upload clear scans',
-                    'Avoid blurry images',
-                    'Include all report pages',
-                    'PDF preferred'
-                  ].map((tip, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
-                      <span className="text-[#1D9E75] font-bold">✓</span> {tip}
-                    </div>
+              {/* Language selector card */}
+              <div className="rounded-2xl border border-gray-200/80 bg-white p-6 shadow-sm">
+                <div className="mb-4 border-b border-gray-100 pb-3">
+                  <h3 className="font-display text-base font-bold text-[#18322D]">Explanation Language Target</h3>
+                  <p className="text-xs text-gray-500 font-body mt-0.5">Select your preferred vernacular dialect for the AI translation output</p>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3" role="radiogroup" aria-labelledby="lang-label">
+                  {LANGUAGES.map((lang) => (
+                    <button
+                      key={lang.code}
+                      role="radio"
+                      aria-checked={language === lang.code}
+                      onClick={() => setLanguage(lang.code)}
+                      className={`flex items-center gap-3 rounded-xl border p-3.5 text-left transition-all duration-200 ${
+                        language === lang.code
+                          ? 'border-transparent bg-[#1D9E75] text-white shadow-md shadow-[#1D9E75]/15 scale-[1.02]'
+                          : 'border-[#E2ECE7] bg-white text-[#3E4F4A] hover:border-[#1D9E75]/30 hover:bg-[#F9FCFB]'
+                      }`}
+                    >
+                      <span className="text-xl shrink-0" role="img" aria-label={lang.english}>{lang.flag}</span>
+                      <div className="min-w-0">
+                        <p className={`font-body text-xs font-bold truncate ${language === lang.code ? 'text-white' : 'text-gray-900'}`}>{lang.native}</p>
+                        <p className={`font-body text-[10px] truncate ${language === lang.code ? 'text-white/80' : 'text-gray-500'}`}>{lang.english}</p>
+                      </div>
+                      {language === lang.code && (
+                        <div className="ml-auto shrink-0 flex items-center justify-center w-5 h-5 rounded-full bg-white/20">
+                          <svg className="h-3 w-3 text-white" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </button>
                   ))}
                 </div>
               </div>
-            </div>
-          )}
 
-          {uploadState === 'uploading' && (
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm animate-fade-in">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-50 text-gray-400">
-                  📄
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-display text-base font-semibold text-gray-900 truncate">
-                    {selectedFile?.name || 'Document.pdf'}
-                  </h4>
-                  <p className="text-sm text-gray-500">Uploading...</p>
-                </div>
-                <span className="font-display text-xl font-bold text-[#1D9E75]">{progress}%</span>
+              {/* Submit CTA */}
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={handleSubmit}
+                  disabled={!file || uploadProgress < 100}
+                  className="w-full sm:w-auto btn-shimmer flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-[#1D9E75] to-[#059669] px-10 py-4 font-body text-base font-bold text-white shadow-[0_12px_32px_rgba(29,158,117,0.22)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(29,158,117,0.28)] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                >
+                  Analyze & Simplify Report
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </button>
               </div>
+
+            </div>
+
+            {/* Right Side: Sidebar Info & Guides */}
+            <div className="lg:col-span-4 space-y-6">
               
-              <div className="h-3 w-full rounded-full bg-gray-100 overflow-hidden">
-                <div
-                  className="h-full bg-[#1D9E75] transition-all duration-300 ease-out"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {uploadState === 'analyzing' && (
-            <div className="rounded-2xl border border-[#1D9E75] bg-white p-8 shadow-md animate-fade-in">
-              <div className="flex items-center gap-3 mb-8 pb-6 border-b border-gray-100">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E1F5EE] text-[#1D9E75]">
-                  ✅
-                </div>
-                <div>
-                  <h3 className="font-display text-lg font-bold text-gray-900">Upload Complete</h3>
-                  <p className="text-sm text-gray-500">AI is analyzing your report...</p>
-                </div>
-              </div>
-
-              <div className="space-y-5 pl-4">
-                {[
-                  { step: 1, label: 'OCR Extraction' },
-                  { step: 2, label: 'Reading medical terms' },
-                  { step: 3, label: 'Detecting abnormal values' },
-                  { step: 4, label: 'Generating AI summary' },
-                ].map(({ step, label }) => {
-                  const isPast = analysisStep >= step
-                  const isCurrent = analysisStep === step - 1
-                  return (
-                    <div key={step} className="flex items-center gap-4">
-                      <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold transition-colors ${
-                        isPast ? 'bg-[#1D9E75] text-white' : 
-                        isCurrent ? 'bg-yellow-100 text-yellow-600 animate-pulse' : 'bg-gray-100 text-gray-400'
-                      }`}>
-                        {isPast ? '✓' : isCurrent ? '⏳' : step}
-                      </div>
-                      <span className={`text-sm font-medium transition-colors ${
-                        isPast ? 'text-gray-900' : isCurrent ? 'text-gray-900' : 'text-gray-400'
-                      }`}>
-                        {label}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-              
-              <div className="mt-8 pt-6 border-t border-gray-100">
-                <div className="flex justify-between text-xs text-gray-500 mb-2 font-medium">
-                  <span>Analysis Progress</span>
-                  <span>~{5 - analysisStep}s remaining</span>
-                </div>
-                <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-                  <div
-                    className="h-full bg-[#1D9E75] transition-all duration-500 ease-out"
-                    style={{ width: `${(analysisStep / 4) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {uploadState === 'complete' && (
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm animate-fade-in space-y-6">
-              <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#E1F5EE] text-[#1D9E75] font-bold text-lg">
-                    {selectedFile?.name.split('.').pop()?.toUpperCase() || 'PNG'}
+              {/* HIPAA / Security Info Card */}
+              <div className="rounded-2xl border border-emerald-100 bg-[#F4FBF9] p-5 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-lg bg-emerald-150 p-2 text-emerald-800 shrink-0">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
                   </div>
                   <div>
-                    <h4 className="font-display text-lg font-bold text-gray-900">{selectedFile?.name || 'Report.pdf'}</h4>
-                    <p className="font-body text-sm text-[#1D9E75] flex items-center gap-1">
-                      <span className="inline-block w-2 h-2 rounded-full bg-[#1D9E75]"></span>
-                      Successfully Analyzed
+                    <h4 className="font-display text-sm font-bold text-[#18322D]">100% Secure & Compliant</h4>
+                    <p className="font-body text-xs text-emerald-950/80 leading-relaxed mt-1">
+                      Your document is processed via enterprise-grade HIPAA compliant architecture. We use end-to-end encryption, and none of your files are stored permanently or shared with third parties.
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Summary Section */}
-              <div className="rounded-xl border border-[#DCEBE6] bg-[#F7FCF9] p-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-5 text-6xl">✨</div>
-                <h4 className="font-display text-base font-semibold text-[#18322D] mb-2 flex items-center gap-2">
-                  <span>✨</span> AI Executive Summary
+              {/* How it works card */}
+              <div className="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-sm">
+                <h4 className="font-display text-sm font-bold text-[#18322D] border-b border-gray-100 pb-2.5 mb-3">
+                  Processing Overview
                 </h4>
-                <p className="leading-relaxed text-[#4A5E59] text-sm">
-                  We successfully extracted and analyzed 5 key medical parameters from this report. 
-                  All values appear to be within normal baseline ranges except for fasting glucose, which is slightly elevated.
-                </p>
-              </div>
-
-              {/* Extracted Values Grid */}
-              <div className="space-y-3">
-                <h4 className="font-display text-base font-semibold text-gray-900">Extracted Biomarkers</h4>
-                <div className="grid gap-3">
-                  {[
-                    { name: 'Fasting Blood Glucose', value: '112 mg/dL', range: '70 - 99 mg/dL', status: 'High', note: 'Slightly elevated (Prediabetic range)' },
-                    { name: 'Hemoglobin A1c (HbA1c)', value: '5.6%', range: '4.0 - 5.6%', status: 'Normal', note: 'Optimal' },
-                    { name: 'Total Cholesterol', value: '195 mg/dL', range: '< 200 mg/dL', status: 'Normal', note: 'Desirable level' },
-                    { name: 'Systolic Blood Pressure', value: '120 mmHg', range: '90 - 120 mmHg', status: 'Normal', note: 'Optimal' },
-                    { name: 'Diastolic Blood Pressure', value: '82 mmHg', range: '60 - 80 mmHg', status: 'Borderline', note: 'Slightly high' },
-                  ].map((param, idx) => (
-                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border border-gray-100 bg-[#FCFDFB] hover:bg-gray-50 transition-colors">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2.5">
-                          <span className="font-display text-sm font-semibold text-gray-900">{param.name}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            param.status === 'High' ? 'bg-red-50 text-red-600' :
-                            param.status === 'Borderline' ? 'bg-amber-50 text-amber-600' : 'bg-[#E1F5EE] text-[#1D9E75]'
-                          }`}>
-                            {param.status}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500">{param.note}</p>
-                      </div>
-                      <div className="mt-2 sm:mt-0 text-right">
-                        <div className="font-display text-sm font-bold text-gray-900">{param.value}</div>
-                        <div className="text-[10px] text-gray-400">Ref: {param.range}</div>
-                      </div>
+                
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-700">1</span>
+                    <div>
+                      <h5 className="font-body text-xs font-bold text-gray-900">OCR Layout Analysis</h5>
+                      <p className="font-body text-[11px] text-gray-500 mt-0.5">The engine reads the document structure, extracting metrics, reference ranges, and diagnostic labels.</p>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-700">2</span>
+                    <div>
+                      <h5 className="font-body text-xs font-bold text-gray-900">Medical Text Simplification</h5>
+                      <p className="font-body text-[11px] text-gray-500 mt-0.5">Complex clinical terminology is converted to clear, easy-to-understand terms tailored for you.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-700">3</span>
+                    <div>
+                      <h5 className="font-body text-xs font-bold text-gray-900">Diagnostic Synthesis</h5>
+                      <p className="font-body text-[11px] text-gray-500 mt-0.5">We synthesize critical findings, highlight alerts, and prepare recommendations for follow-up Q&A.</p>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* Action Recommendations */}
-              <div className="rounded-xl border border-gray-150 bg-gray-50 p-5 space-y-3">
-                <h4 className="font-display text-sm font-bold text-gray-900 flex items-center gap-2">
-                  <span>💡</span> Recommended Next Steps
+              {/* Supported reports list */}
+              <div className="rounded-2xl border border-gray-200/80 bg-white p-5 shadow-sm">
+                <h4 className="font-display text-sm font-bold text-[#18322D] border-b border-gray-100 pb-2.5 mb-3">
+                  Optimized Documents
                 </h4>
-                <ul className="space-y-2 text-xs text-gray-600 pl-4 list-disc">
-                  <li>Monitor your sugar intake and focus on complex carbohydrates.</li>
-                  <li>Schedule a follow-up with your doctor to discuss the fasting blood glucose levels.</li>
-                  <li>Consult our AI chat below for personalized health tips.</li>
+                <ul className="space-y-2">
+                  {[
+                    'Complete Blood Counts (CBC)',
+                    'Lipid Panels (Cholesterol profiles)',
+                    'Metabolic Panels (Kidney & Liver)',
+                    'Thyroid Function (TSH, Free T4)',
+                    'General Biochemistry Reports',
+                  ].map((item, idx) => (
+                    <li key={idx} className="flex items-center gap-2 text-[11px] text-gray-600 font-medium font-body">
+                      <span className="text-emerald-500 shrink-0">✔</span>
+                      {item}
+                    </li>
+                  ))}
                 </ul>
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  onClick={() => setUploadState('idle')}
-                  className="rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Upload Another
-                </button>
-                <button
-                  onClick={() => onNavigate('chat')}
-                  className="rounded-xl bg-[#1D9E75] px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[#168562] transition-colors"
-                >
-                  Open in AI Chat
-                </button>
-              </div>
             </div>
-          )}
 
-        </div>
+          </div>
+        ) : (
+          /* Processing state card */
+          <div className="max-w-[640px] mx-auto rounded-2xl border border-[#E3F1EB] bg-white p-10 text-center shadow-md">
+            <div className="mb-8">
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-[#E8F7F2] shadow-inner">
+                <svg className="h-8 w-8 animate-spin text-[#1D9E75]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeOpacity="0.2" />
+                  <path d="M12 2 A10 10 0 0 1 22 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </div>
+              <h2 className="font-display text-xl font-bold text-[#18322D]">Synthesizing Your Report...</h2>
+              <p className="mt-1 font-body text-xs text-[#8FA49E] font-medium">This typically takes 15–20 seconds</p>
+            </div>
 
-        {/* Right Column: Information Sidebar (30%) */}
-        <div className="lg:col-span-4 space-y-4">
-          
-          {/* Card 1: Recent Uploads */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 className="font-display text-sm font-bold text-gray-900 mb-4">Recent Uploads</h3>
-            <div className="space-y-1">
-              {mockRecentUploads.map((file, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors group cursor-pointer">
-                  <div className="overflow-hidden">
-                    <p className="font-body text-xs font-semibold text-gray-900 truncate pr-2">{file.name}</p>
-                    <p className="font-body text-[10px] text-gray-500">{file.date} · {file.size}</p>
-                  </div>
-                  <span className="font-body text-[10px] font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 group-hover:bg-[#1D9E75] group-hover:text-white transition-colors shrink-0">
-                    View
+            <div className="mx-auto max-w-sm space-y-3.5 text-left border border-gray-100 bg-[#FAFBF9] p-6 rounded-xl shadow-inner" role="status" aria-live="polite">
+              {PROCESSING_STEPS.map((step, i) => (
+                <div key={step} className="flex items-center gap-3.5">
+                  {i < processStep ? (
+                    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#E1F5EE]">
+                      <svg className="h-3 w-3 text-[#1D9E75]" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6 L5 9 L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </div>
+                  ) : i === processStep ? (
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center">
+                      <span className="h-2 w-2 rounded-full bg-[#1D9E75] animate-pulse" />
+                    </span>
+                  ) : (
+                    <div className="h-5 w-5 shrink-0 rounded-full border border-[#DCEBE6] bg-white" />
+                  )}
+                  <span className={`font-body text-xs transition-colors ${i <= processStep ? 'text-[#18322D] font-bold' : 'text-gray-400'}`}>
+                    {step}
                   </span>
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Card 2: Supported Reports */}
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h3 className="font-display text-sm font-bold text-gray-900 mb-4">Supported Reports</h3>
-            <div className="flex flex-wrap gap-2">
-              {[
-                'Blood Test',
-                'CBC',
-                'Lipid Profile',
-                'Thyroid',
-                'Diabetes',
-                'Liver Function',
-                'Kidney Function',
-              ].map(cat => (
-                <span key={cat} className="px-2.5 py-1 bg-gray-50 border border-gray-100 text-gray-600 text-xs rounded-md font-medium">
-                  {cat}
-                </span>
-              ))}
-              <span className="px-2.5 py-1 bg-gray-50 border border-gray-100 text-gray-400 text-xs rounded-md font-medium border-dashed">
-                X-Ray (Coming Soon)
-              </span>
-            </div>
+            <p className="mt-8 text-[11px] text-gray-400 font-semibold">
+              ⚠️ Please do not close this window or refresh the page.
+            </p>
           </div>
-
-          {/* Card 3: Privacy */}
-          <div className="rounded-2xl border border-[#E1F5EE] bg-[#F7FCF9] p-5 shadow-sm">
-            <h3 className="font-display text-sm font-bold text-[#18322D] mb-3 flex items-center gap-2">
-              🔒 Your reports are private
-            </h3>
-            <ul className="space-y-2 text-xs text-[#4A5E59]">
-              <li className="flex items-center gap-2"><span className="text-[#1D9E75]">•</span> HIPAA Compliant</li>
-              <li className="flex items-center gap-2"><span className="text-[#1D9E75]">•</span> End-to-end encryption</li>
-              <li className="flex items-center gap-2"><span className="text-[#1D9E75]">•</span> Files processed securely</li>
-            </ul>
-          </div>
-
-        </div>
+        )}
       </div>
     </AuthenticatedShell>
   )

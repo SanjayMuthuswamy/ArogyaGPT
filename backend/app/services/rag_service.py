@@ -27,8 +27,9 @@ class RAGService:
     - Conversational context injection
     """
 
+    _shared_embedding_model = None
+
     def __init__(self) -> None:
-        self._embedding_model = None
         self.embedding_model_name = settings.HUGGINGFACE_MODEL
         self.chunk_size = settings.RAG_CHUNK_SIZE
         self.chunk_overlap = settings.RAG_CHUNK_OVERLAP
@@ -36,11 +37,11 @@ class RAGService:
         self.index_dir = Path(settings.FAISS_INDEX_PATH)
 
     def _get_embedding_model(self):
-        """Lazy-load the sentence transformer model."""
-        if self._embedding_model is None:
+        """Lazy-load the sentence transformer model as a shared singleton."""
+        if RAGService._shared_embedding_model is None:
             try:
                 from sentence_transformers import SentenceTransformer
-                self._embedding_model = SentenceTransformer(
+                RAGService._shared_embedding_model = SentenceTransformer(
                     self.embedding_model_name,
                     device=settings.EMBEDDING_DEVICE,
                 )
@@ -52,7 +53,7 @@ class RAGService:
                 )
             except Exception as e:
                 raise RAGIndexingError(f"Failed to load embedding model: {str(e)}")
-        return self._embedding_model
+        return RAGService._shared_embedding_model
 
     def _chunk_text(self, text: str) -> list[str]:
         """

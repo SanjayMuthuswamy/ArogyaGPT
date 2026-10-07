@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AuthenticatedShell from '../components/layout/AuthenticatedShell'
+import { api, ReportItem } from '../services/api'
 
 interface DashboardPageProps {
   onNavigate: (page: string) => void
@@ -16,18 +17,51 @@ interface Report {
   simplifiedCount: number
 }
 
-const mockRecentReports: Report[] = [
-  { id: '1', date: '2026-07-24', type: 'Complete Blood Count (CBC)', hospital: 'Apollo Diagnostics', status: 'Completed', simplifiedCount: 14 },
-  { id: '2', date: '2026-07-20', type: 'Lipid Profile & Cholesterol', hospital: 'Max Healthcare', status: 'Needs Review', simplifiedCount: 8 },
-  { id: '3', date: '2026-07-15', type: 'HbA1c & Fasting Glucose', hospital: 'Fortis Lab', status: 'Processing', simplifiedCount: 6 },
-  { id: '4', date: '2026-07-10', type: 'Thyroid Function Panel (T3/T4/TSH)', hospital: 'PathKind Labs', status: 'Completed', simplifiedCount: 9 },
-  { id: '5', date: '2026-07-02', type: 'Renal Function & Electrolytes', hospital: 'Thyrocare', status: 'Critical', simplifiedCount: 11 },
-]
+const MOCK_REPORTS: Report[] = []
+
+function mapStatus(s: string): StatusType {
+  const m: Record<string, StatusType> = {
+    completed: 'Completed',
+    needs_review: 'Needs Review',
+    processing: 'Processing',
+    critical: 'Critical',
+    pending: 'Processing',
+    failed: 'Needs Review',
+  }
+  return m[s.toLowerCase()] ?? 'Processing'
+}
+
+function mapApiReport(r: ReportItem): Report {
+  return {
+    id: r.id,
+    date: r.report_date ?? r.created_at?.slice(0, 10) ?? '',
+    type: r.report_type ?? r.title ?? 'Medical Report',
+    hospital: r.hospital_name ?? 'Unknown Facility',
+    status: mapStatus(r.status),
+    simplifiedCount: r.file_count ?? 0,
+  }
+}
 
 export default function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [selectedReport, setSelectedReport] = useState<Report | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [filter, setFilter] = useState<StatusType | 'All'>('All')
+  const [reports, setReports] = useState<Report[]>([])
+  const [totalReports, setTotalReports] = useState(0)
+
+  useEffect(() => {
+    api.listReports({ per_page: 20 })
+      .then(({ items, total }) => {
+        setReports(items.map(mapApiReport))
+        setTotalReports(total)
+      })
+      .catch(() => {
+        setReports([])
+        setTotalReports(0)
+      })
+  }, [])
+
+  const mockRecentReports = reports
 
   const filteredReports = mockRecentReports.filter(report => {
     const matchesSearch = report.type.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -79,7 +113,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
               +3
             </span>
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 tracking-tight">24</h3>
+          <h3 className="text-2xl font-bold text-gray-900 tracking-tight">{totalReports}</h3>
           <p className="text-xs font-medium text-gray-500 mt-0.5">Total Reports</p>
         </div>
 
@@ -330,7 +364,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
                   AI Summary
                 </p>
                 <p className="leading-relaxed text-[#4A5E59]">
-                  Based on the {selectedReport.simplifiedCount} parameters analyzed, the results align with typical baseline levels. Minor attention recommended for lipid markers, consult your physician for detailed advice.
+                  Report processed by ArogyaGPT. Open the report to view all clinical parameters and ask questions in your chosen language.
                 </p>
               </div>
             </div>

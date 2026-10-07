@@ -1,8 +1,9 @@
-import { useState, useRef } from 'react'
-import ReportPanel from '../components/report/ReportPanel'
+import { useState, useRef, useEffect } from 'react'
+import ReportPanel, { Section, Parameter } from '../components/report/ReportPanel'
 import ChatPanel from '../components/chat/ChatPanel'
 import PdfExportContent from '../components/report/PdfExportContent'
 import { useSpeech } from '../hooks/useSpeech'
+import { api, ReportDetail } from '../services/api'
 
 // @ts-ignore — html2pdf has no official TS types
 import html2pdf from 'html2pdf.js'
@@ -11,37 +12,106 @@ interface ReportViewPageProps {
   onNavigate: (page: 'home' | 'upload' | 'report') => void
 }
 
-// ── Static report data passed to the PDF export ────────────────────────────
-const PDF_SECTIONS = [
-  {
-    name: 'Complete Blood Count',
-    params: [
-      { name: 'Hemoglobin',  value: '13.2', unit: 'g/dL',  range: '13.5–17.5', status: 'warning'  as const, plain: "Your blood's oxygen carrier is slightly below the healthy range.", translation: 'உங்கள் இரத்தத்தின் ஆக்சிஜன் தாங்கி சற்று குறைவாக உள்ளது.' },
-      { name: 'RBC Count',   value: '5.1',  unit: 'M/μL',  range: '4.5–5.9',   status: 'normal'   as const, plain: 'Your red blood cells are within the healthy range.',             translation: 'உங்கள் சிவப்பு இரத்த அணுக்கள் சாதாரண அளவில் உள்ளன.' },
-      { name: 'Platelets',   value: '145',  unit: 'K/μL',  range: '150–400',   status: 'warning'  as const, plain: 'Your platelets are slightly below normal. Monitor for easy bruising.', translation: 'உங்கள் தட்டணுக்கள் சற்று குறைவாக உள்ளன.' },
-    ],
-  },
-  {
-    name: 'Metabolic Panel',
-    params: [
-      { name: 'Blood Sugar (Fasting)', value: '250', unit: 'mg/dL', range: '70–100', status: 'critical' as const, plain: 'Your fasting blood sugar is significantly above normal. This indicates possible diabetes.', translation: 'உங்கள் இரத்த சர்க்கரை அளவு மிகவும் அதிகமாக உள்ளது.' },
-      { name: 'Creatinine',            value: '1.0', unit: 'mg/dL', range: '0.6–1.2', status: 'normal' as const,  plain: 'Your kidneys are filtering blood effectively.',                                         translation: 'உங்கள் சிறுநீரகம் சரியாக செயல்படுகிறது.' },
-    ],
-  },
-]
-
-const PDF_INSIGHTS = [
-  { icon: '🩸', title: 'Your Blood Sugar is High',     body: 'Your fasting blood sugar of 250 mg/dL is well above the normal range of 70–100 mg/dL. This is typically associated with diabetes or pre-diabetes. Consult a physician immediately and avoid sugary foods and refined carbs.' },
-  { icon: '🫀', title: 'Hemoglobin is Slightly Low',   body: 'Your hemoglobin at 13.2 g/dL is marginally below the normal male range. Include iron-rich foods like spinach, lentils, and red meat. A follow-up blood test in 6–8 weeks is recommended.' },
-]
-
-const AVAILABLE_LANGUAGES = ['English', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'Malayalam', 'Bengali']
+const AVAILABLE_LANGUAGES = ['Tamil', 'English', 'Hindi', 'Telugu', 'Kannada', 'Malayalam', 'Bengali', 'Marathi', 'Gujarati']
 
 type DownloadState = 'idle' | 'generating' | 'done'
+
+function mapReportToSections(detail: ReportDetail): Section[] {
+  if (!detail.lab_results || detail.lab_results.length === 0) {
+    return [
+      {
+        name: detail.report_type || detail.title || 'Laboratory Findings',
+        params: [],
+      },
+    ]
+  }
+
+  const params: Parameter[] = detail.lab_results.map((r) => {
+    const isAb = r.is_abnormal
+    const status: 'normal' | 'warning' | 'critical' = isAb
+      ? (r.abnormality_direction === 'high' ? 'critical' : 'warning')
+      : 'normal'
+
+    const numVal = r.numeric_value ?? (parseFloat(r.result_value) || 0)
+    return {
+      name: r.test_name,
+      value: r.result_value,
+      unit: r.unit || '',
+      range: r.reference_range || 'Normal',
+      status,
+      rangeMin: numVal * 0.7,
+      rangeMax: numVal * 1.3,
+      actualValue: numVal,
+      plain: isAb
+        ? `${r.test_name} (${r.result_value} ${r.unit || ''}) is outside expected reference range (${r.reference_range || 'abnormal'}).`
+        : `${r.test_name} (${r.result_value} ${r.unit || ''}) is within normal parameters.`,
+      translation: `${r.test_name}: ${r.result_value} ${r.unit || ''}`,
+    }
+  })
+
+  return [
+    {
+      name: detail.report_type || 'Laboratory Findings',
+      params,
+    },
+  ]
+}
+
+function mapReportToInsights(detail: ReportDetail) {
+  if (!detail.abnormalities || detail.abnormalities.length === 0) {
+    return []
+  }
+  return detail.abnormalities.map((ab) => ({
+    icon: ab.severity === 'critical' ? '🚨' : '⚠️',
+    title: `${ab.parameter_name}: ${ab.detected_value} ${ab.parameter_unit || ''}`,
+    body:
+      ab.plain_language_explanation ||
+      ab.clinical_significance ||
+      `Recorded outside standard range (${ab.reference_range_text || 'abnormal'}). Consult your physician.`,
+  }))
+}
 
 export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
   const [mobileTab, setMobileTab] = useState<'report' | 'chat'>('report')
   const [language, setLanguage] = useState('English')
+
+  const [reportData, setReportData] = useState<ReportDetail | null>(null)
+  const [isProcessing, setIsProcessing] = useState(false)
+
+  // ── Fetch active report from backend ────────────────────────────────────
+  useEffect(() => {
+    const reportId = localStorage.getItem('activeReportId')
+    if (!reportId) return
+
+    let active = true
+    const fetchReport = async () => {
+      try {
+        const data = await api.getReport(reportId)
+        if (active) {
+          setReportData(data)
+          if (data.status === 'processing' || data.status === 'pending') {
+            setIsProcessing(true)
+          } else {
+            setIsProcessing(false)
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load report details:', err)
+      }
+    }
+
+    fetchReport()
+    const timer = setInterval(() => {
+      if (isProcessing) {
+        fetchReport()
+      }
+    }, 2500)
+
+    return () => {
+      active = false
+      clearInterval(timer)
+    }
+  }, [isProcessing])
 
   // ── Voice ──────────────────────────────────────────────────────────────
   const { speak, pause, resume, stop, isSpeaking, isPaused, progress } = useSpeech()
@@ -70,19 +140,27 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
   const [downloadState, setDownloadState] = useState<DownloadState>('idle')
   const [downloadError, setDownloadError] = useState(false)
 
+  const activeTitle = reportData?.title || "Medical Report"
+  const activeSections = reportData ? mapReportToSections(reportData) : []
+  const activeInsights = reportData ? mapReportToInsights(reportData) : []
+  const activeSummary =
+    reportData?.summary ||
+    reportData?.simplified_text ||
+    "Your medical report has been processed by ArogyaGPT. Review each laboratory parameter and consult your doctor for medical advice."
+
   const handleDownload = async () => {
     setDownloadState('generating')
     setDownloadError(false)
     const element = document.getElementById('pdf-export-content')
     if (!element) { setDownloadState('idle'); return }
 
-    // Make visible briefly for html2canvas capture
     element.style.visibility = 'visible'
 
     const date = new Date().toISOString().slice(0, 10)
+    const cleanFilename = activeTitle.replace(/[^a-zA-Z0-9_-]/g, '_')
     const options = {
       margin:      [12, 10, 12, 10] as [number, number, number, number],
-      filename:    `MedEase-Report-Mr-Rajan-${date}.pdf`,
+      filename:    `ArogyaGPT-${cleanFilename}-${date}.pdf`,
       image:       { type: 'jpeg' as const, quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FDFCFA' },
       jsPDF:       { unit: 'mm' as const, format: 'a4', orientation: 'portrait' as const },
@@ -107,12 +185,12 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
 
       {/* Hidden PDF export — rendered off-screen, always light */}
       <PdfExportContent
-        patientName="Mr. Rajan"
-        reportDate="June 2024"
+        patientName={activeTitle}
+        reportDate={reportData?.report_date || new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
         language={language}
-        sections={PDF_SECTIONS}
-        summary="Your blood sugar is significantly elevated and requires medical attention. Blood count is largely normal with minor dips in hemoglobin and platelets. An appointment with your physician is strongly advised."
-        insights={PDF_INSIGHTS}
+        sections={activeSections}
+        summary={activeSummary}
+        insights={activeInsights}
       />
 
       {/* Top bar */}
@@ -131,10 +209,18 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
             <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" aria-hidden="true">
               <path d="M13 4 L7 10 L13 16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
-            <span className="font-display text-lg font-medium text-text-primary hidden sm:inline">
-              Mr. Rajan's Report
+            <span className="font-display text-lg font-medium text-text-primary hidden sm:inline truncate max-w-sm">
+              {activeTitle}
             </span>
           </button>
+
+          {/* Processing badge if background pipeline is still active */}
+          {isProcessing && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-medium border border-amber-200 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+              AI Analyzing Document...
+            </span>
+          )}
 
           {/* Right controls */}
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -182,7 +268,6 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
                   }`}
                 aria-label={!isSpeaking && !isPaused ? 'Listen to report' : isPaused ? 'Resume' : 'Pause reading'}
               >
-                {/* Idle & Speaking: Volume2 icon */}
                 {!isPaused && (
                   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
@@ -190,7 +275,6 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
                     <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
                   </svg>
                 )}
-                {/* Paused: VolumeX icon */}
                 {isPaused && (
                   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
@@ -222,7 +306,6 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
                   : 'Downloaded!'
                 }
               >
-                {/* Idle: Download icon */}
                 {downloadState === 'idle' && (
                   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -230,14 +313,12 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
                     <line x1="12" y1="15" x2="12" y2="3" />
                   </svg>
                 )}
-                {/* Generating: Spinner ring */}
                 {downloadState === 'generating' && (
                   <svg className="w-[16px] h-[16px] animate-spin-smooth" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <circle cx="12" cy="12" r="9" stroke="rgba(200,169,110,0.25)" strokeWidth="2.5" />
                     <path d="M12 3 A9 9 0 0 1 21 12" stroke="#E6A817" strokeWidth="2.5" strokeLinecap="round" />
                   </svg>
                 )}
-                {/* Done: Check icon */}
                 {downloadState === 'done' && (
                   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="#3A9E6E" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -246,7 +327,6 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
                 )}
               </button>
 
-              {/* Inline label beside button (replaces tooltip while active) */}
               {downloadState !== 'idle' && (
                 <span className={`absolute top-1/2 -translate-y-1/2 right-[44px] whitespace-nowrap text-[11px] pointer-events-none
                   ${downloadState === 'generating' ? 'text-text-muted' : 'text-status-normal'}`}>
@@ -254,7 +334,6 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
                 </span>
               )}
 
-              {/* Idle tooltip */}
               {downloadState === 'idle' && (
                 <div className="absolute top-full right-0 mt-2 whitespace-nowrap bg-bg-deep text-text-inverse text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                   Download simplified report
@@ -266,9 +345,8 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
         </div>
       </div>
 
-      {/* ── STATUS BAR (voice progress / download shimmer) ── */}
+      {/* Status Bar */}
       <div className="h-[2px] w-full relative overflow-hidden" aria-hidden="true">
-        {/* Voice progress bar */}
         <div
           className={`absolute inset-0 bg-[rgba(126,207,194,0.10)] transition-opacity duration-300 ${isSpeaking ? 'opacity-100' : 'opacity-0'}`}
         >
@@ -278,32 +356,22 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
           />
         </div>
 
-        {/* PDF generating shimmer */}
         {downloadState === 'generating' && (
           <div className="absolute inset-0 shimmer-gold" />
         )}
 
-        {/* PDF done bar */}
         {downloadState === 'done' && (
           <div className="absolute inset-0 bg-status-normal transition-opacity duration-500" />
         )}
       </div>
 
-      {/* Download error message */}
       {downloadError && (
         <div className="text-center py-1 font-body text-[11px] text-status-critical bg-status-critical/5">
           Download failed. Please try again.
         </div>
       )}
 
-      {/* Screen reader announcements */}
-      <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {isSpeaking ? 'Reading report aloud' : ''}
-        {downloadState === 'generating' ? 'Generating PDF, please wait' : ''}
-        {downloadState === 'done' ? 'Report downloaded successfully' : ''}
-      </div>
-
-      {/* ── Two-panel layout ── */}
+      {/* Two-panel layout */}
       <div className="flex-1 flex overflow-hidden max-w-screen-2xl mx-auto w-full">
 
         {/* Left — Report (58%) */}
@@ -313,7 +381,7 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
                        ${mobileTab === 'chat' ? 'hidden md:flex' : 'flex'}`}
         >
           <div className="flex-1 overflow-y-auto scrollbar-thin p-4 md:p-6 lg:p-8">
-            <ReportPanel />
+            <ReportPanel sections={activeSections} summary={activeSummary} />
           </div>
         </div>
 
@@ -323,7 +391,7 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
                        ${mobileTab === 'report' ? 'hidden md:flex' : 'flex'}`}
         >
           <div className="flex-1 overflow-hidden flex flex-col p-4 md:p-6">
-            <ChatPanel />
+            <ChatPanel selectedLanguage={language} onLanguageChange={setLanguage} />
           </div>
         </div>
       </div>

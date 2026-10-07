@@ -163,9 +163,9 @@ async def logout(
     payload: LogoutRequest,
     request: Request,
     current_user: CurrentUser,
+    db: DBSession,
+    redis: Cache,
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
-    db: DBSession = Depends(lambda db: db),
-    redis: Cache = Depends(lambda redis: redis),
 ) -> SuccessResponse:
     service = AuthService(db=db, redis=redis)
     access_token = credentials.credentials if credentials else ""

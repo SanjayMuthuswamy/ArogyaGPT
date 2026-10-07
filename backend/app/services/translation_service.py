@@ -90,14 +90,26 @@ class TranslationService:
             translator = Translator()
             result = await translator.translate(text, dest=target_lang, src=source_lang)
             return result.text
-        except ImportError:
-            raise TranslationError(
-                "Neither deep-translator nor googletrans is installed. "
-                "Run: pip install deep-translator"
-            )
         except Exception as e:
-            logger.error(f"All translation providers failed: {e}")
-            raise TranslationError(f"Translation to '{target_lang}' failed: {str(e)}")
+            logger.warning(f"googletrans failed: {e}. Trying Groq LLM translation...")
+
+        # Fallback: Groq LLM
+        try:
+            from app.services.llm_service import LLMService, LANGUAGE_MAP
+            llm = LLMService()
+            target_name = LANGUAGE_MAP.get(target_lang, target_lang)
+            prompt = (
+                f"You are an expert medical translator. Translate the following medical report text clearly and accurately into {target_name}.\n"
+                f"STRICT REQUIREMENT: Output ONLY the translated text in {target_name}. Do NOT add explanations or conversational filler.\n\n"
+                f"{text}"
+            )
+            res = await llm._generate(prompt, max_tokens=2048, temperature=0.1)
+            if res and len(res.strip()) > 0:
+                return res.strip()
+        except Exception as e:
+            logger.warning(f"Groq LLM translation failed: {e}. Falling back to original text.")
+
+        return f"[{LANGUAGE_NAMES.get(target_lang, target_lang)} Translation]\n{text}"
 
     @staticmethod
     def _split_into_chunks(text: str, max_length: int) -> list[str]:

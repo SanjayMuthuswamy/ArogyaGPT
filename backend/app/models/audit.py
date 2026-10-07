@@ -53,7 +53,7 @@ class AuditLog(Base, UUIDMixin, TimestampMixin):
 
     # Details
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    event_metadata: Mapped[Optional[dict]] = mapped_column("metadata", JSON, nullable=True)
     status: Mapped[str] = mapped_column(
         String(20), nullable=False, default="success"  # "success" | "failure"
     )

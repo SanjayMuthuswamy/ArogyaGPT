@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSpeech } from '../../hooks/useSpeech'
 import { useSpeechRecognition } from '../../hooks/useSpeechRecognition'
+import { api } from '../../services/api'
 
 interface Message {
   id: number
@@ -9,33 +10,107 @@ interface Message {
   lang?: string
 }
 
-const SUGGESTED = [
-  'What does my report indicate?',
-  'Which values are abnormal?',
-  'What precautions should I take?',
+export interface LanguageOption {
+  code: string
+  name: string
+  native: string
+}
+
+export const SUPPORTED_LANGUAGES: LanguageOption[] = [
+  { code: 'ta', name: 'Tamil', native: 'தமிழ்' },
+  { code: 'en', name: 'English', native: 'English' },
+  { code: 'hi', name: 'Hindi', native: 'हिन्दी' },
+  { code: 'te', name: 'Telugu', native: 'తెలుగు' },
+  { code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ' },
+  { code: 'ml', name: 'Malayalam', native: 'മലയാളം' },
+  { code: 'bn', name: 'Bengali', native: 'বাংলা' },
+  { code: 'mr', name: 'Marathi', native: 'मराठी' },
+  { code: 'gu', name: 'Gujarati', native: 'ગુજરાતી' },
 ]
 
-const AI_RESPONSES: Record<string, string> = {
-  'What does my report indicate?':
-    'Your report shows two key concerns: your fasting blood sugar at 250 mg/dL is significantly elevated, suggesting diabetes or pre-diabetes. Your hemoglobin is also slightly below normal at 13.2 g/dL. The rest of your blood counts are within healthy ranges. I would strongly advise consulting your doctor about the blood sugar reading.',
-  'Which values are abnormal?':
-    'Two values stand out: Blood Sugar (Fasting) at 250 mg/dL (normal: 70–100) — this is critically high. Hemoglobin at 13.2 g/dL (normal: 13.5–17.5) — this is borderline low. Your platelets at 145 K/μL are also slightly below the lower limit of normal.',
-  'What precautions should I take?':
-    'For your blood sugar: avoid sugary drinks, refined carbohydrates, and white rice. Walk at least 30 minutes daily. For your hemoglobin: eat iron-rich foods like spinach, lentils, and eggs. Most importantly — please visit a physician soon for a proper diagnosis and treatment plan.',
+const SUGGESTED_BY_LANG: Record<string, string[]> = {
+  ta: [
+    'எனது அறிக்கையில் என்ன குறிப்பிடப்பட்டுள்ளது?',
+    'எந்த மதிப்புகள் மாறுபட்டுள்ளன?',
+    'நான் என்ன முன்னெச்சரிக்கை எடுக்க வேண்டும்?',
+  ],
+  hi: [
+    'मेरी रिपोर्ट क्या दर्शाती है?',
+    'कौन से मान असामान्य हैं?',
+    'मुझे क्या सावधानियां बरतनी चाहिए?',
+  ],
+  te: [
+    'నా నివేదిక ఏమి తెలియజేస్తుంది?',
+    'ఏ విలువలు అసాధారణంగా ఉన్నాయి?',
+    'నేను తీసుకోవలసిన జాగ్రత్తలు ఏమిటి?',
+  ],
+  kn: [
+    'ನನ್ನ ವರದಿ ಏನು ಸೂಚಿಸುತ್ತದೆ?',
+    'ಯಾವ ಮೌಲ್ಯಗಳು ಅಸಹಜವಾಗಿವೆ?',
+    'ನಾನು ಯಾವ ಮುನ್ನೆಚ್ಚರಿಕೆಗಳನ್ನು ತೆಗೆದುಕೊಳ್ಳಬೇಕು?',
+  ],
+  ml: [
+    'എന്റെ റിപ്പോർട്ട് എന്ത് സൂചിപ്പിക്കുന്നു?',
+    'ഏതൊക്കെ മൂല്യങ്ങളാണ് അസാധാരണമായിട്ടുള്ളത്?',
+    'ഞാൻ എന്ത് മുൻകരുതലുകൾ എടുക്കണം?',
+  ],
+  bn: [
+    'আমার রিপোর্টে কি বোঝানো হয়েছে?',
+    'কোন মানগুলি অস্বাভাবিক?',
+    'আমার কি সতর্কতা অবলম্বন করা উচিত?',
+  ],
+  en: [
+    'What does my report indicate?',
+    'Which values are abnormal?',
+    'What precautions should I take?',
+  ],
 }
 
 let msgId = 1
 
-export default function ChatPanel() {
+interface ChatPanelProps {
+  selectedLanguage?: string
+  onLanguageChange?: (lang: string) => void
+}
+
+export default function ChatPanel({ selectedLanguage, onLanguageChange }: ChatPanelProps) {
+  // Find current language object
+  const getLangObj = (langNameOrCode?: string): LanguageOption => {
+    if (!langNameOrCode) return SUPPORTED_LANGUAGES[0] // Default Tamil
+    const query = langNameOrCode.toLowerCase().trim()
+    const found = SUPPORTED_LANGUAGES.find(
+      l => l.code.toLowerCase() === query || l.name.toLowerCase() === query || l.native.toLowerCase() === query
+    )
+    return found || SUPPORTED_LANGUAGES[0]
+  }
+
+  const [currentLang, setCurrentLang] = useState<LanguageOption>(() => getLangObj(selectedLanguage))
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [typing, setTyping] = useState(false)
-  const [suggested, setSuggested] = useState(SUGGESTED)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
+  // Sync when parent changes language
+  useEffect(() => {
+    if (selectedLanguage) {
+      const match = getLangObj(selectedLanguage)
+      if (match.code !== currentLang.code) {
+        setCurrentLang(match)
+      }
+    }
+  }, [selectedLanguage])
+
+  const handleLanguageSelect = (code: string) => {
+    const match = SUPPORTED_LANGUAGES.find(l => l.code === code) || SUPPORTED_LANGUAGES[0]
+    setCurrentLang(match)
+    if (onLanguageChange) {
+      onLanguageChange(match.name)
+    }
+  }
+
   const { speak, pause, resume, isSpeaking, isPaused } = useSpeech()
-  const { startListening, stopListening, isListening, transcript, setTranscript } = useSpeechRecognition('Tamil')
+  const { startListening, stopListening, isListening, transcript } = useSpeechRecognition(currentLang.name)
   
   const [speakingId, setSpeakingId] = useState<number | null>(null)
 
@@ -49,7 +124,7 @@ export default function ChatPanel() {
     } else if (speakingId === id && isPaused) {
       resume()
     } else {
-      speak(text, 'Tamil')
+      speak(text, currentLang.name)
       setSpeakingId(id)
     }
   }
@@ -67,27 +142,26 @@ export default function ChatPanel() {
     const userMsg: Message = { id: msgId++, role: 'user', text }
     setMessages(p => [...p, userMsg])
     setInput('')
-    setSuggested([])
     setTyping(true)
 
     try {
-      const res = await fetch('http://localhost:11434/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'llama3.2:latest',
-          prompt: "You are a helpful medical assistant answering questions about a medical report. You MUST answer the user in Tamil language. Keep answers concise, simple, and compassionate.\n\nUser: " + text,
-          stream: false
-        })
-      });
-      const data = await res.json();
-      const response = data.response || "I couldn't generate a response.";
+      const activeReportId = localStorage.getItem('activeReportId') || undefined
+      const data = await api.askQuestion({
+        question: text,
+        report_id: activeReportId,
+        language_code: currentLang.code,
+      })
       setTyping(false)
-      setMessages(p => [...p, { id: msgId++, role: 'ai', text: response, lang: 'Tamil' }])
+      setMessages(p => [...p, { id: msgId++, role: 'ai', text: data.answer, lang: currentLang.native }])
     } catch (error) {
-      console.error('Ollama connection error:', error)
+      console.warn('Backend chat API error:', error)
+      const errorMsg = currentLang.code === 'ta'
+        ? "மன்னிக்கவும், AI பதிலை உருவாக்க முடியவில்லை. தயவுசெய்து உங்கள் இணைய இணைப்பை சரிபார்த்து மீண்டும் முயற்சிக்கவும்."
+        : currentLang.code === 'hi'
+        ? "क्षमा करें, AI उत्तर उत्पन्न करने में असमर्थ है। कृपया अपना इंटरनेट कनेक्शन जांचें और पुनः प्रयास करें।"
+        : "I'm having trouble analyzing your report right now. Please ensure your report has completed processing, or try again in a moment."
       setTyping(false)
-      setMessages(p => [...p, { id: msgId++, role: 'ai', text: 'Unable to connect to local Ollama model. Please make sure Ollama is running on your machine.', lang: 'English' }])
+      setMessages(p => [...p, { id: msgId++, role: 'ai', text: errorMsg, lang: currentLang.native }])
     }
   }
 
@@ -105,16 +179,37 @@ export default function ChatPanel() {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`
   }
 
+  const suggestedQuestions = SUGGESTED_BY_LANG[currentLang.code] || SUGGESTED_BY_LANG.en
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="pb-4 border-b border-[rgba(46,125,107,0.1)] mb-4">
-        <h2 className="font-display text-xl font-medium text-text-primary tracking-[-0.01em]">
-          Ask Your Report
-        </h2>
-        <p className="font-body text-sm text-text-muted mt-0.5">
-          Chat in English or your regional language
-        </p>
+      <div className="pb-3 border-b border-[rgba(46,125,107,0.1)] mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display text-xl font-medium text-text-primary tracking-[-0.01em]">
+            Ask Your Report
+          </h2>
+          <p className="font-body text-xs text-text-muted mt-0.5">
+            Groq AI answers in your chosen language
+          </p>
+        </div>
+
+        {/* Language selector in chat */}
+        <div className="flex items-center gap-1.5 bg-bg-surface px-2.5 py-1.5 rounded-xl border border-[rgba(46,125,107,0.18)] shadow-sm">
+          <span className="text-xs text-text-muted">🗣️</span>
+          <select
+            value={currentLang.code}
+            onChange={e => handleLanguageSelect(e.target.value)}
+            className="bg-transparent font-body text-xs font-semibold text-brand-primary outline-none cursor-pointer"
+            aria-label="Select Chat Language"
+          >
+            {SUPPORTED_LANGUAGES.map(l => (
+              <option key={l.code} value={l.code} className="text-gray-900 bg-white">
+                {l.native} ({l.name})
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Message area */}
@@ -125,15 +220,15 @@ export default function ChatPanel() {
         aria-label="Chat messages"
       >
         {/* Suggested questions */}
-        {suggested.length > 0 && messages.length === 0 && (
+        {messages.length === 0 && (
           <div className="flex flex-wrap gap-2 animate-fade-in" aria-label="Suggested questions">
-            {suggested.map(q => (
+            {suggestedQuestions.map(q => (
               <button
                 key={q}
                 onClick={() => sendMessage(q)}
                 className="font-body text-sm px-3.5 py-2.5 rounded-full
                            bg-bg-surface border border-[rgba(46,125,107,0.15)]
-                           text-text-secondary hover:border-brand-glow/40
+                           text-text-secondary hover:border-brand-glow/40 hover:text-brand-primary
                            transition-all duration-fast ease-smooth
                            min-h-[44px] text-left"
               >
@@ -192,7 +287,7 @@ export default function ChatPanel() {
 
                   {msg.lang && (
                     <span className="font-body text-xs text-text-muted/70">
-                      Answered in {msg.lang}
+                      {msg.lang}
                     </span>
                   )}
                 </div>
@@ -224,11 +319,11 @@ export default function ChatPanel() {
         )}
 
         <div ref={bottomRef} />
-      </div>{/* end message area */}
+      </div>
 
       {/* Screen reader announcement */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {isListening ? 'Listening for voice input' : ''}
+        {isListening ? `Listening for voice input in ${currentLang.name}` : ''}
       </div>
 
       {/* Input bar */}
@@ -240,7 +335,7 @@ export default function ChatPanel() {
             value={input}
             onChange={e => { setInput(e.target.value); autoResize() }}
             onKeyDown={handleKey}
-            placeholder={isListening ? "Listening... speak in Tamil" : "Ask anything about your report..."}
+            placeholder={isListening ? `Listening... speak in ${currentLang.native}` : `Ask in ${currentLang.native} (${currentLang.name})...`}
             className={`flex-1 bg-transparent font-body text-base resize-none outline-none min-h-[48px] max-h-[120px] py-2.5 px-2 leading-[1.5] ${isListening ? 'text-brand-glow italic' : 'text-text-primary placeholder-text-muted'}`}
             aria-label="Type your question"
             rows={1}

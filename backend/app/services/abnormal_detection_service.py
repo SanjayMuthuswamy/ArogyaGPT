@@ -152,10 +152,121 @@ class AbnormalDetectionService:
         text_abnormalities = self._scan_text_for_abnormalities(text)
         abnormalities.extend(text_abnormalities)
 
+        # Count how many recognized canonical lab parameters were detected
+        valid_canonical_count = sum(
+            1 for lr in lab_results if self._match_test_name(lr.get("test_name", "")) is not None
+        )
+
+        # If rule-based extraction found few recognized tests (< 2) or few total (< 3), use Groq LLM extraction
+        if (valid_canonical_count < 2 or len(lab_results) < 3) and len(text.strip()) > 20:
+            try:
+                llm_lab, llm_abn = await self._extract_via_llm(text)
+                if llm_lab and len(llm_lab) > 0:
+                    lab_results = llm_lab
+                    abnormalities = llm_abn
+            except Exception as e:
+                logger.warning(f"LLM lab extraction fallback skipped or failed: {e}")
+
         logger.info(
             f"Abnormality detection: {len(lab_results)} lab values | "
             f"{len(abnormalities)} abnormalities found"
         )
+
+        return lab_results, abnormalities
+
+    async def _extract_via_llm(self, text: str) -> tuple[list[dict], list[dict]]:
+        """Extract lab results and abnormalities using Groq LLM structured JSON output."""
+        from app.core.config import settings
+        if not settings.GROQ_API_KEY:
+            return [], []
+
+        from groq import AsyncGroq
+        import json
+
+        client = AsyncGroq(api_key=settings.GROQ_API_KEY)
+        prompt = (
+            "You are a clinical data extraction engine. Extract all laboratory tests, measured values, units, reference ranges, and abnormalities from this medical report text.\n"
+            "Correct minor OCR spelling mistakes in test names (e.g. Hemcolobin -> Hemoglobin, Glucx -> Glucose).\n"
+            "Return ONLY a valid JSON array of objects. Each object MUST have these exact keys:\n"
+            '- "test": standard clinical name of test\n'
+            '- "value": measured value string or number\n'
+            '- "unit": unit of measurement\n'
+            '- "reference_range": normal reference range string\n'
+            '- "is_abnormal": boolean true or false\n'
+            '- "direction": "high" or "low" or null\n'
+            '- "severity": "critical" or "severe" or "moderate" or "normal"\n\n'
+            f"Medical Report Text:\n{text[:4000]}\n\n"
+            "JSON:"
+        )
+
+        candidate_models = [settings.GROQ_MODEL_NAME, "qwen/qwen3.8-27b", "openai/gpt-oss-20b", "openai/gpt-oss-120b"]
+        raw = ""
+        for model in candidate_models:
+            if not model:
+                continue
+            try:
+                resp = await client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=1500,
+                    temperature=0.0,
+                )
+                raw = resp.choices[0].message.content.strip()
+                if raw:
+                    break
+            except Exception as e:
+                logger.warning(f"Groq lab extraction model '{model}' failed: {e}")
+
+        if not raw:
+            return [], []
+
+        if "```json" in raw:
+            raw = raw.split("```json")[1].split("```")[0].strip()
+        elif "```" in raw:
+            raw = raw.split("```")[1].split("```")[0].strip()
+
+        data = json.loads(raw)
+        if not isinstance(data, list):
+            return [], []
+
+        lab_results = []
+        abnormalities = []
+
+        for item in data:
+            val_str = str(item.get("value", ""))
+            num_val = _parse_numeric(val_str)
+            is_ab = bool(item.get("is_abnormal", False))
+            direction = item.get("direction")
+            if direction:
+                direction = str(direction).lower()
+
+            lr = {
+                "test_name": str(item.get("test", "Unknown")),
+                "result_value": val_str,
+                "numeric_value": num_val,
+                "unit": item.get("unit"),
+                "reference_range": str(item.get("reference_range", "")),
+                "is_abnormal": is_ab,
+                "abnormality_direction": direction if is_ab else None,
+            }
+            lab_results.append(lr)
+
+            if is_ab:
+                sev = str(item.get("severity", "moderate")).lower()
+                abnormalities.append({
+                    "parameter_name": str(item.get("test", "Unknown")),
+                    "parameter_unit": item.get("unit"),
+                    "detected_value": val_str,
+                    "numeric_value": num_val,
+                    "reference_range_low": None,
+                    "reference_range_high": None,
+                    "reference_range_text": str(item.get("reference_range", "")),
+                    "abnormality_type": f"{direction.upper()}" if direction else "ABNORMAL",
+                    "severity": sev if sev in ["critical", "severe", "moderate"] else "moderate",
+                    "clinical_significance": f"Value of {val_str} {item.get('unit', '')} is outside typical range ({item.get('reference_range', '')}).",
+                    "plain_language_explanation": f"Your {item.get('test', 'test')} level is {val_str} {item.get('unit', '')}, which is {direction or 'different from'} the normal range. Please consult your physician.",
+                    "is_llm_validated": True,
+                })
 
         return lab_results, abnormalities
 

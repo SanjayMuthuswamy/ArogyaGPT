@@ -33,7 +33,7 @@ class RefreshToken(Base, UUIDMixin, TimestampMixin):
     )
 
     # The stored token is hashed for security (never store raw tokens)
-    token_hash: Mapped[str] = mapped_column(String(512), nullable=False, index=True, unique=True)
+    token_hash: Mapped[str] = mapped_column(String(512), nullable=False, unique=True)
     user_id: Mapped[str] = mapped_column(
         String(36),
         ForeignKey("users.id", ondelete="CASCADE"),

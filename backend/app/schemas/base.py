@@ -23,6 +23,7 @@ class BaseSchema(BaseModel):
         str_strip_whitespace=True, # Auto-strip whitespace from strings
         validate_assignment=True,  # Validate on attribute assignment
         use_enum_values=True,      # Serialize enums as values
+        protected_namespaces=(),
     )
 
 

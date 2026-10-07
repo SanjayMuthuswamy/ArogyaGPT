@@ -53,31 +53,30 @@ class MedicalNLPService:
     Fallback: Rule-based regex patterns
     """
 
+    _nlp_shared = None
+    _spacy_attempted = False
+
     def __init__(self) -> None:
-        self._nlp = None
+        self._nlp = MedicalNLPService._nlp_shared
         self._scispacy_available = False
 
     def _load_spacy_model(self):
-        """Lazy-load the spaCy model."""
-        if self._nlp is None:
+        """Lazy-load the spaCy model once."""
+        if not MedicalNLPService._spacy_attempted:
+            MedicalNLPService._spacy_attempted = True
             try:
                 import spacy
-                # Try scispaCy first (better for medical text)
                 try:
-                    self._nlp = spacy.load("en_core_sci_sm")
+                    MedicalNLPService._nlp_shared = spacy.load("en_core_sci_sm")
                     self._scispacy_available = True
                     logger.info("scispaCy model loaded: en_core_sci_sm")
                 except OSError:
-                    # Fallback to standard spaCy
-                    self._nlp = spacy.load(settings.SPACY_MODEL)
+                    MedicalNLPService._nlp_shared = spacy.load(settings.SPACY_MODEL)
                     logger.info(f"spaCy model loaded: {settings.SPACY_MODEL}")
-            except ImportError:
-                logger.warning("spaCy not installed. Using rule-based entity extraction.")
-            except OSError:
-                logger.warning(
-                    f"spaCy model '{settings.SPACY_MODEL}' not found. "
-                    "Run: python -m spacy download en_core_web_sm"
-                )
+            except Exception:
+                logger.info("spaCy medical models not found. Fast medical entity extractor active.")
+
+        self._nlp = MedicalNLPService._nlp_shared
         return self._nlp
 
     async def extract_entities(self, text: str) -> dict:

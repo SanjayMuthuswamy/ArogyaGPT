@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, Query, UploadFile, status
+from fastapi import APIRouter, File, Form, Query, UploadFile, status, BackgroundTasks
 from fastapi.responses import FileResponse
 
 from app.core.config import settings
@@ -110,6 +110,7 @@ async def upload_report(
     current_user: VerifiedUser,
     db: DBSession,
     redis: Cache,
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(..., description="Medical report file (PDF/PNG/JPG/JPEG)"),
     title: str = Form(..., min_length=1, max_length=500),
     description: Optional[str] = Form(default=None),
@@ -157,18 +158,15 @@ async def upload_report(
     db.add(report_file)
     await db.flush()
 
-    # Dispatch Celery processing task
-    try:
-        from app.workers.tasks import process_report_task
-        task = process_report_task.delay(
-            report_id=report.id,
-            file_path=file_path,
-            user_id=current_user.id,
-            language=preferred_language or current_user.preferred_language,
-        )
-        report.celery_task_id = task.id
-    except Exception as e:
-        logger.warning(f"Celery task dispatch failed: {e}. Report queued for manual processing.")
+    # Dispatch background AI processing immediately via FastAPI BackgroundTasks
+    from app.workers.tasks import _pipeline_async
+    background_tasks.add_task(
+        _pipeline_async,
+        report.id,
+        file_path,
+        current_user.id,
+        preferred_language or current_user.preferred_language or "en",
+    )
 
     logger.info(
         f"Report uploaded: id={report.id} | user={current_user.email} | "
@@ -215,6 +213,7 @@ async def upload_camera_report(
     payload: CameraUploadRequest,
     current_user: VerifiedUser,
     db: DBSession,
+    background_tasks: BackgroundTasks,
 ) -> SuccessResponse[ReportSummaryResponse]:
     # Extract Base64 string
     base64_str = payload.image_base64.strip()
@@ -283,18 +282,15 @@ async def upload_camera_report(
     db.add(report_file)
     await db.flush()
 
-    # Dispatch Celery processing task
-    try:
-        from app.workers.tasks import process_report_task
-        task = process_report_task.delay(
-            report_id=report.id,
-            file_path=str(file_path),
-            user_id=current_user.id,
-            language=payload.preferred_language or current_user.preferred_language,
-        )
-        report.celery_task_id = task.id
-    except Exception as e:
-        logger.warning(f"Celery task dispatch failed: {e}")
+    # Dispatch background AI processing immediately via FastAPI BackgroundTasks
+    from app.workers.tasks import _pipeline_async
+    background_tasks.add_task(
+        _pipeline_async,
+        report.id,
+        str(file_path),
+        current_user.id,
+        payload.preferred_language or current_user.preferred_language or "en",
+    )
 
     logger.info(f"Camera report uploaded: id={report.id} | user={current_user.email} | size={len(content)}B")
 

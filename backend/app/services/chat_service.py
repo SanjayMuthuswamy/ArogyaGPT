@@ -240,12 +240,18 @@ class ChatService:
         # ---- Build conversation history ----
         history_text = await self._build_history(session.id, window=session.context_window_size)
 
+        # ---- Determine language ----
+        target_lang = payload.language_code or session.language_code or getattr(user, "preferred_language", "en") or "en"
+        if payload.language_code and session.language_code != payload.language_code:
+            session.language_code = payload.language_code
+
         # ---- Call LLM ----
         try:
             answer = await self.llm.answer_question(
                 question=payload.question,
                 context=context_text,
                 chat_history=history_text,
+                language=target_lang,
             )
         except LLMServiceError as e:
             logger.error(f"LLM failed for session {session.id}: {e}")

@@ -51,7 +51,7 @@ class OCRService:
         try:
             if file_ext == "pdf":
                 return await self._extract_from_pdf(file_path)
-            elif file_ext in {"png", "jpg", "jpeg", "tiff", "bmp"}:
+            elif file_ext in {"png", "jpg", "jpeg", "tiff", "bmp", "webp"}:
                 return await self._extract_from_image(file_path)
             else:
                 raise OCRProcessingError(f"Unsupported file type for OCR: {file_ext}")
@@ -59,7 +59,7 @@ class OCRService:
             raise
         except Exception as e:
             logger.error(f"OCR extraction failed for {file_path}: {e}")
-            raise OCRProcessingError(f"OCR failed: {str(e)}")
+            raise OCRProcessingError(f"Could not extract text from document: {str(e)}")
 
     async def _extract_from_pdf(self, file_path: str) -> Tuple[str, float]:
         """
@@ -123,10 +123,26 @@ class OCRService:
                 pix = page.get_pixmap(matrix=mat)
                 img_bytes = pix.tobytes("png")
                 image = Image.open(io.BytesIO(img_bytes))
-                text, conf = self._tesseract_ocr(image)
-                if text.strip():
-                    text_parts.append(text)
-                    total_confidence.append(conf)
+                page_text = ""
+                page_conf = 0.95
+                try:
+                    import winocr
+                    res = await winocr.recognize_pil(image, "en")
+                    if res:
+                        lines = [l.text.strip() for l in res.lines if l.text.strip()] if hasattr(res, "lines") and res.lines else []
+                        page_text = "\n".join(lines) if lines else (res.text or "").strip()
+                except Exception:
+                    pass
+
+                if not page_text:
+                    try:
+                        page_text, page_conf = self._tesseract_ocr(image)
+                    except Exception:
+                        pass
+
+                if page_text.strip():
+                    text_parts.append(page_text)
+                    total_confidence.append(page_conf)
 
             doc.close()
             avg_confidence = sum(total_confidence) / len(total_confidence) if total_confidence else 0.0
@@ -136,20 +152,60 @@ class OCRService:
             raise OCRProcessingError(f"PDF image OCR failed: {str(e)}")
 
     async def _extract_from_image(self, file_path: str) -> Tuple[str, float]:
-        """Extract text from an image file using configured OCR provider with camera preprocessing."""
+        """Extract text from an image file using native fast OCR with line preservation."""
         try:
-            from PIL import Image
-            image = Image.open(file_path)
-            # Enhance image quality for camera-captured reports
-            image = self._preprocess_camera_image(image)
+            from PIL import Image, ImageOps
+            raw_image = Image.open(file_path)
+            # Auto-orient based on camera EXIF tags
+            image = ImageOps.exif_transpose(raw_image)
         except Exception as e:
             raise OCRProcessingError(f"Cannot open image: {str(e)}")
 
+        # 1. Primary: Native Windows OCR (winocr) on original image with proper line separation
+        try:
+            import winocr
+            result = await winocr.recognize_pil(image, "en")
+            if result:
+                lines = [line.text.strip() for line in result.lines if line.text.strip()] if hasattr(result, "lines") and result.lines else []
+                text = "\n".join(lines) if lines else (result.text or "").strip()
+                if len(text) > 10:
+                    logger.info(f"WinOCR extracted {len(text)} chars ({len(lines)} lines) from {file_path}")
+                    return text, 0.95
+        except Exception as e:
+            logger.warning(f"WinOCR extraction on raw image failed: {e}")
+
+        # 1b. If raw image failed or had low yield, try preprocessed image
+        try:
+            import winocr
+            preprocessed = self._preprocess_camera_image(image)
+            result = await winocr.recognize_pil(preprocessed, "en")
+            if result:
+                lines = [line.text.strip() for line in result.lines if line.text.strip()] if hasattr(result, "lines") and result.lines else []
+                text = "\n".join(lines) if lines else (result.text or "").strip()
+                if len(text) > 10:
+                    logger.info(f"WinOCR (preprocessed) extracted {len(text)} chars from {file_path}")
+                    return text, 0.90
+        except Exception as e:
+            logger.warning(f"WinOCR preprocessed extraction failed: {e}")
+
+        # 2. Fallback: PaddleOCR if configured
         if self.provider == "paddleocr":
-            return await self._paddleocr(file_path)
-        else:
+            try:
+                return await self._paddleocr(file_path)
+            except Exception as e:
+                logger.warning(f"PaddleOCR failed: {e}")
+
+        # 3. Fallback: Tesseract OCR
+        try:
             text, confidence = self._tesseract_ocr(image)
-            return text, confidence
+            if text and len(text.strip()) > 10:
+                return text.strip(), confidence
+        except Exception as e:
+            logger.warning(f"Tesseract OCR failed: {e}")
+
+        raise OCRProcessingError(
+            "Could not detect clear text from this image. Please upload a clear photo or PDF of your medical report."
+        )
 
     @staticmethod
     def _preprocess_camera_image(image):

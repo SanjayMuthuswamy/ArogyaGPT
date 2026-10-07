@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { api } from '../services/api'
 
 interface AuthPageProps {
   onNavigate: (page: string) => void
@@ -14,16 +15,41 @@ export default function AuthPage({ onNavigate, onLoginSuccess, initialMode = 'si
   const [confirmPassword, setConfirmPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(true)
   const [submitted, setSubmitted] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => {
-      if (onLoginSuccess) {
-        onLoginSuccess()
+    setErrorMsg('')
+    setIsLoading(true)
+
+    try {
+      if (isSignUp) {
+        await api.register({
+          email: email.trim(),
+          password,
+          full_name: name.trim() || 'User',
+        })
       }
-      onNavigate('dashboard')
-    }, 800)
+      await api.login(email.trim(), password)
+      setSubmitted(true)
+      setTimeout(() => {
+        if (onLoginSuccess) {
+          onLoginSuccess()
+          return
+        }
+        onNavigate('dashboard')
+      }, 500)
+    } catch (err: any) {
+      console.error('Auth error:', err)
+      const detail =
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        'Authentication failed. Please verify your credentials.'
+      setErrorMsg(detail)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -91,6 +117,12 @@ export default function AuthPage({ onNavigate, onLoginSuccess, initialMode = 'si
                 {isSignUp ? 'Enter details to start simplifying medical reports.' : 'Sign in to access your secure ArogyaGPT workspace.'}
               </p>
             </div>
+
+            {errorMsg && (
+              <div className="mb-4 rounded-2xl bg-red-50 border border-red-200 p-3 text-xs font-semibold text-red-700 shadow-sm">
+                ⚠️ {errorMsg}
+              </div>
+            )}
 
             {submitted && (
               <div className="mb-4 rounded-2xl bg-[#1D9E75] p-3 text-xs font-semibold text-white shadow-md animate-pulse">

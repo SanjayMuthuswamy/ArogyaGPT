@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 type Status = 'normal' | 'warning' | 'critical'
 
-interface Parameter {
+export interface Parameter {
   name: string
   value: string
   unit: string
@@ -15,64 +15,23 @@ interface Parameter {
   translation: string
 }
 
-interface Section {
+export interface Section {
   name: string
   params: Parameter[]
 }
 
-const REPORT_DATA: Section[] = [
-  {
-    name: 'Complete Blood Count',
-    params: [
-      {
-        name: 'Hemoglobin',
-        value: '13.2', unit: 'g/dL', range: '13.5–17.5', status: 'warning',
-        rangeMin: 13.5, rangeMax: 17.5, actualValue: 13.2,
-        plain: "Your blood's oxygen carrier is slightly below the healthy range.",
-        translation: 'உங்கள் இரத்தத்தின் ஆக்சிஜன் தாங்கி சற்று குறைவாக உள்ளது.',
-      },
-      {
-        name: 'RBC Count',
-        value: '5.1', unit: 'M/μL', range: '4.5–5.9', status: 'normal',
-        rangeMin: 4.5, rangeMax: 5.9, actualValue: 5.1,
-        plain: 'Your red blood cells are within the healthy range.',
-        translation: 'உங்கள் சிவப்பு இரத்த அணுக்கள் சாதாரண அளவில் உள்ளன.',
-      },
-      {
-        name: 'Platelets',
-        value: '145', unit: 'K/μL', range: '150–400', status: 'warning',
-        rangeMin: 150, rangeMax: 400, actualValue: 145,
-        plain: 'Your platelets are slightly below normal. Monitor for easy bruising.',
-        translation: 'உங்கள் தட்டணுக்கள் சற்று குறைவாக உள்ளன.',
-      },
-    ],
-  },
-  {
-    name: 'Metabolic Panel',
-    params: [
-      {
-        name: 'Blood Sugar (Fasting)',
-        value: '250', unit: 'mg/dL', range: '70–100', status: 'critical',
-        rangeMin: 70, rangeMax: 100, actualValue: 250,
-        plain: 'Your fasting blood sugar is significantly above normal. This indicates possible diabetes.',
-        translation: 'உங்கள் இரத்த சர்க்கரை அளவு மிகவும் அதிகமாக உள்ளது.',
-      },
-      {
-        name: 'Creatinine',
-        value: '1.0', unit: 'mg/dL', range: '0.6–1.2', status: 'normal',
-        rangeMin: 0.6, rangeMax: 1.2, actualValue: 1.0,
-        plain: 'Your kidneys are filtering blood effectively.',
-        translation: 'உங்கள் சிறுநீரகம் சரியாக செயல்படுகிறது.',
-      },
-    ],
-  },
-]
+const REPORT_DATA: Section[] = []
+
+interface ReportPanelProps {
+  sections?: Section[]
+  summary?: string
+}
 
 const StatusBadge = ({ status }: { status: Status }) => {
   const map: Record<Status, { label: string; cls: string; icon: string }> = {
-    normal:   { label: 'Normal',   cls: 'badge-normal',   icon: '✓' },
+    normal:   { label: 'Normal',     cls: 'badge-normal',   icon: '✓' },
     warning:  { label: 'Borderline', cls: 'badge-warning',  icon: '~' },
-    critical: { label: 'High',     cls: 'badge-critical',  icon: '!' },
+    critical: { label: 'High',       cls: 'badge-critical', icon: '!' },
   }
   const { label, cls, icon } = map[status]
   return (
@@ -99,7 +58,10 @@ const RangeBar = ({ min, max, value }: { min: number; max: number; value: number
 
 type ReportTab = 'simplified' | 'values' | 'insights'
 
-export default function ReportPanel() {
+export default function ReportPanel({ sections: propSections, summary: propSummary }: ReportPanelProps = {}) {
+  const activeData = propSections && propSections.length > 0 ? propSections : REPORT_DATA
+  const activeSummary = propSummary || 'Your medical report has been processed by ArogyaGPT. Please review your laboratory findings and clinical parameters.'
+
   const [activeTab, setActiveTab] = useState<ReportTab>('simplified')
   const [expanded, setExpanded] = useState<Record<string, boolean>>({ 'Complete Blood Count': true })
   const [filter, setFilter] = useState<'all' | Status>('all')
@@ -107,8 +69,9 @@ export default function ReportPanel() {
   const toggleSection = (name: string) =>
     setExpanded(p => ({ ...p, [name]: !p[name] }))
 
-  const allParams = REPORT_DATA.flatMap(s => s.params)
+  const allParams = activeData.flatMap(s => s.params)
   const filtered = filter === 'all' ? allParams : allParams.filter(p => p.status === filter)
+
 
   return (
     <div className="flex flex-col h-full">
@@ -145,9 +108,7 @@ export default function ReportPanel() {
             <div className="bg-bg-deep rounded-lg p-6 mb-6">
               <p className="font-body text-xs uppercase tracking-[0.1em] text-text-muted mb-3">Report Summary</p>
               <p className="font-display text-lg italic text-text-inverse leading-[1.7] font-light">
-                "Your blood sugar is significantly elevated and requires medical attention.
-                 Blood count is largely normal with minor dips in hemoglobin and platelets.
-                 An appointment with your physician is strongly advised."
+                "{activeSummary}"
               </p>
               <div className="flex items-center gap-3 mt-4 pt-4 border-t border-white/8">
                 <span className="font-body text-xs text-text-muted">Blood Report · June 2024</span>
@@ -159,7 +120,7 @@ export default function ReportPanel() {
 
             {/* Sections */}
             <div className="space-y-3">
-              {REPORT_DATA.map(section => {
+              {activeData.map(section => {
                 const abnormal = section.params.filter(p => p.status !== 'normal').length
                 const isOpen = expanded[section.name] !== false
                 return (
@@ -278,30 +239,32 @@ export default function ReportPanel() {
         {/* TAB 3: Health Insights */}
         {activeTab === 'insights' && (
           <div id="tabpanel-insights" role="tabpanel" aria-label="Health insights" className="space-y-4">
-            {[
-              {
-                icon: '🩸',
-                title: 'Your Blood Sugar is High',
-                body: 'Your fasting blood sugar of 250 mg/dL is well above the normal range of 70–100 mg/dL. This level is typically associated with diabetes or pre-diabetes. It does not mean a crisis — but it needs attention.',
-                sections: [
-                  { q: 'What causes this?', a: 'High blood sugar can result from insufficient insulin production, insulin resistance, stress, poor diet, or a sedentary lifestyle. Family history also plays a role.' },
-                  { q: 'What are the symptoms?', a: 'Frequent urination, increased thirst, fatigue, blurred vision, and slow-healing wounds are common symptoms of elevated blood sugar.' },
-                  { q: 'What should you do?', a: 'Consult a physician immediately. Avoid sugary foods and refined carbs. Regular physical activity and monitoring will help manage your levels.' },
-                ],
-              },
-              {
-                icon: '🫀',
-                title: 'Hemoglobin is Slightly Low',
-                body: 'Your hemoglobin at 13.2 g/dL is marginally below the normal male range (13.5–17.5 g/dL). This is mild and may indicate slight anemia or iron deficiency.',
-                sections: [
-                  { q: 'What causes this?', a: 'Low hemoglobin can stem from iron deficiency, vitamin B12 deficiency, blood loss, or chronic disease.' },
-                  { q: 'What are the symptoms?', a: 'Fatigue, breathlessness during activity, pale skin, and dizziness are common signs.' },
-                  { q: 'What should you do?', a: 'Include iron-rich foods (spinach, lentils, red meat) in your diet. A follow-up blood test in 6–8 weeks is recommended.' },
-                ],
-              },
-            ].map(insight => (
-              <InsightCard key={insight.title} {...insight} />
-            ))}
+            {(() => {
+              const abnormalParams = activeData.flatMap((s: Section) => s.params).filter((p: Parameter) => p.status !== 'normal')
+              if (abnormalParams.length === 0) {
+                return (
+                  <div className="bg-bg-surface rounded-lg border border-[rgba(46,125,107,0.1)] p-6 text-center">
+                    <p className="text-2xl mb-2">✅</p>
+                    <h3 className="font-display font-medium text-text-primary text-base mb-1">No Abnormal Parameters Flagged</h3>
+                    <p className="text-sm text-text-muted max-w-md mx-auto">
+                      All measured tests in this report fall within standard clinical reference intervals. Review with your healthcare provider for clinical correlation.
+                    </p>
+                  </div>
+                )
+              }
+              return abnormalParams.map((p: Parameter) => (
+                <InsightCard
+                  key={p.name}
+                  icon={p.status === 'critical' ? '🚨' : '⚠️'}
+                  title={`${p.name} is ${p.status === 'critical' ? 'Outside Standard Range' : 'Borderline'}`}
+                  body={`Recorded value: ${p.value} ${p.unit} (Reference: ${p.range}). ${p.plain}`}
+                  sections={[
+                    { q: 'Clinical Significance', a: p.plain },
+                    { q: 'Recommended Action', a: 'Discuss this parameter with your physician to evaluate trends against your symptoms and medical history.' },
+                  ]}
+                />
+              ))
+            })()}
           </div>
         )}
       </div>

@@ -82,7 +82,7 @@ class Settings(BaseSettings):
 
     # --- AI / Groq LLM ---
     GROQ_API_KEY: str = ""
-    GROQ_MODEL_NAME: str = "llama3-70b-8192"
+    GROQ_MODEL_NAME: str = "qwen/qwen3.8-27b"
     GROQ_MAX_TOKENS: int = 4096
     GROQ_TEMPERATURE: float = 0.1
 
@@ -152,6 +152,13 @@ class Settings(BaseSettings):
     # --- Admin ---
     FIRST_ADMIN_EMAIL: str = "admin@arogyagpt.com"
     FIRST_ADMIN_PASSWORD: str = "Admin@12345"
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def validate_debug(cls, v):
+        if isinstance(v, str):
+            return v.strip().lower() in ("true", "1", "yes", "t", "dev", "debug")
+        return bool(v)
 
     @field_validator("ENVIRONMENT")
     @classmethod

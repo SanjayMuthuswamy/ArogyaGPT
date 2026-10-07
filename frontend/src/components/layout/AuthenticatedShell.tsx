@@ -1,4 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useCallback, type ReactNode } from 'react'
+
+const FONT_STEPS = [14, 16, 18, 20]
+const DEFAULT_STEP = 1  // index into FONT_STEPS → 16px
 
 interface AuthenticatedShellProps {
   title: string
@@ -40,7 +43,7 @@ const navItems = [
   },
   {
     key: 'library',
-    label: 'Medical Library',
+    label: 'Library',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
@@ -79,14 +82,23 @@ export default function AuthenticatedShell({
   onAction,
 }: AuthenticatedShellProps) {
   const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [fontStep, setFontStep] = useState(DEFAULT_STEP)
+
+  const changeFontSize = useCallback((dir: 1 | -1) => {
+    setFontStep(prev => {
+      const next = Math.min(FONT_STEPS.length - 1, Math.max(0, prev + dir))
+      document.documentElement.style.setProperty('--font-size-base', `${FONT_STEPS[next]}px`)
+      return next
+    })
+  }, [])
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden bg-[#FAFAF8]">
 
       {/* ── FIXED SIDEBAR ─────────────────────────────────── */}
       <aside
         style={{ width: SIDEBAR_W }}
-        className="fixed left-0 top-0 bottom-0 z-40 flex flex-col overflow-y-auto bg-white border-r border-[#E3F1EB] shadow-[2px_0_16px_rgba(24,50,45,0.06)]"
+        className="fixed bottom-0 left-0 top-0 z-40 hidden flex-col overflow-y-auto border-r border-[#E3F1EB] bg-white shadow-[2px_0_16px_rgba(24,50,45,0.06)] lg:flex"
       >
         {/* Brand — same height as fixed header (h-16 = 64px) */}
         <div className="flex h-16 items-center px-5 border-b border-[#E3F1EB] flex-shrink-0">
@@ -156,7 +168,7 @@ export default function AuthenticatedShell({
           </div>
 
           <button
-            onClick={() => onNavigate('home')}
+            onClick={() => onNavigate('logout')}
             className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left font-body text-xs font-semibold text-[#C23B3B] hover:bg-[#FFF5F5] transition-colors duration-200"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -168,16 +180,15 @@ export default function AuthenticatedShell({
       </aside>
 
       {/* ── MAIN CONTENT ───────────────────────────────────── */}
-      <div style={{ marginLeft: SIDEBAR_W }} className="flex flex-col min-h-screen pt-16">
+      <div className="flex min-h-screen flex-col pt-16 lg:ml-[260px]">
 
         {/* Top bar — fixed */}
         <header
-          style={{ left: SIDEBAR_W }}
-          className="fixed top-0 right-0 z-30 flex h-16 items-center justify-between border-b border-[#E5E7EB] bg-white px-6"
+          className="fixed left-0 right-0 top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-[#E5E7EB] bg-white px-4 lg:left-[260px] lg:px-6"
         >
           {/* Left: Page Title & Subtitle */}
-          <div className="flex flex-col justify-center min-w-0">
-            <h1 className="font-display text-lg font-bold text-[#18322D] leading-tight truncate">{title}</h1>
+          <div className="flex min-w-0 flex-col justify-center">
+            <h1 className="font-body text-xl font-bold leading-tight tracking-tight text-[#18322D] truncate">{title}</h1>
             {subtitle && (
               <span className="font-body text-xs text-[#4A5E59] hidden md:inline-block truncate leading-tight mt-0.5">
                 {subtitle}
@@ -185,20 +196,41 @@ export default function AuthenticatedShell({
             )}
           </div>
 
-          {/* Center — empty for clean minimal look */}
+          {/* Center — empty */}
           <div className="flex-1" />
 
-          {/* Right: Upload CTA + Profile dropdown */}
-          <div className="flex items-center gap-4">
+          {/* Right: A+/A- + Upload CTA + Profile dropdown */}
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+
+            {/* Font size controls */}
+            <div className="hidden sm:flex items-center gap-0.5 rounded-full border border-[#DCEBE6] bg-white px-1 py-1 shadow-sm">
+              <button
+                onClick={() => changeFontSize(-1)}
+                disabled={fontStep === 0}
+                aria-label="Decrease font size"
+                className="flex h-7 w-7 items-center justify-center rounded-full font-body text-[13px] font-semibold text-[#4A5E59] transition hover:bg-[#F0FBF6] hover:text-[#1D9E75] disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                A<span className="text-[9px] align-super">−</span>
+              </button>
+              <div className="h-4 w-px bg-[#E3F1EB]" />
+              <button
+                onClick={() => changeFontSize(1)}
+                disabled={fontStep === FONT_STEPS.length - 1}
+                aria-label="Increase font size"
+                className="flex h-7 w-7 items-center justify-center rounded-full font-body text-[15px] font-semibold text-[#4A5E59] transition hover:bg-[#F0FBF6] hover:text-[#1D9E75] disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                A<span className="text-[9px] align-super">+</span>
+              </button>
+            </div>
             {/* Primary CTA: Upload Report */}
             <button
               onClick={() => onNavigate('upload')}
-              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-5 py-2 font-body text-xs font-semibold text-white shadow-[0_8px_20px_rgba(29,158,117,0.22)] hover:scale-[1.02] active:scale-[0.98] transition"
+              className="flex min-h-9 items-center gap-2 rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-3 py-2 font-body text-xs font-semibold text-white shadow-[0_8px_20px_rgba(29,158,117,0.22)] transition hover:scale-[1.02] active:scale-[0.98] sm:px-5"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
               </svg>
-              Upload Report
+              <span className="hidden sm:inline">Upload Report</span>
             </button>
 
             {/* Profile dropdown */}
@@ -233,10 +265,10 @@ export default function AuthenticatedShell({
                   ))}
                   <div className="border-t border-[#E3F1EB] my-1" />
                   <button
-                    onClick={() => { onNavigate('home'); setShowProfileMenu(false) }}
+                    onClick={() => { onNavigate('logout'); setShowProfileMenu(false) }}
                     className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#FFF5F5] font-semibold text-[#C23B3B] transition"
                   >
-                    🚪 Sign Out
+                    Sign Out
                   </button>
                 </div>
               )}
@@ -245,10 +277,33 @@ export default function AuthenticatedShell({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-6 lg:p-8">
+        <main className="flex-1 bg-[#F8FAF9] p-4 pb-24 sm:p-6 lg:p-8 lg:pb-8 2xl:p-10">
           {children}
         </main>
       </div>
+
+      <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#E3F1EB] bg-white/95 px-2 py-2 shadow-[0_-8px_24px_rgba(16,50,46,0.08)] backdrop-blur lg:hidden" aria-label="Mobile navigation">
+        <div className="grid grid-cols-5 gap-1">
+          {navItems.slice(0, 5).map((item) => {
+            const active = currentPage === item.key
+            return (
+              <button
+                key={item.key}
+                onClick={() => onNavigate(item.key)}
+                aria-current={active ? 'page' : undefined}
+                className={`flex min-h-[52px] flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold leading-tight transition ${
+                  active
+                    ? 'bg-[#E1F5EE] text-[#1D9E75]'
+                    : 'text-[#6B7B76] hover:bg-[#F7FCF9] hover:text-[#18322D]'
+                }`}
+              >
+                <span className="scale-90">{item.icon}</span>
+                <span className="max-w-full truncate">{item.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
     </div>
   )
 }
