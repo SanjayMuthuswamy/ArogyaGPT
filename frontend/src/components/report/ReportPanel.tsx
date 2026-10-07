@@ -25,6 +25,7 @@ const REPORT_DATA: Section[] = []
 interface ReportPanelProps {
   sections?: Section[]
   summary?: string
+  detailedText?: string
 }
 
 const StatusBadge = ({ status }: { status: Status }) => {
@@ -58,12 +59,12 @@ const RangeBar = ({ min, max, value }: { min: number; max: number; value: number
 
 type ReportTab = 'simplified' | 'values' | 'insights'
 
-export default function ReportPanel({ sections: propSections, summary: propSummary }: ReportPanelProps = {}) {
+export default function ReportPanel({ sections: propSections, summary: propSummary, detailedText }: ReportPanelProps = {}) {
   const activeData = propSections && propSections.length > 0 ? propSections : REPORT_DATA
   const activeSummary = propSummary || 'Your medical report has been processed by ArogyaGPT. Please review your laboratory findings and clinical parameters.'
 
   const [activeTab, setActiveTab] = useState<ReportTab>('simplified')
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({ 'Complete Blood Count': true })
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({ 'Complete Blood Count': true, 'Diagnostic Report': true, 'Laboratory Findings': true })
   const [filter, setFilter] = useState<'all' | Status>('all')
 
   const toggleSection = (name: string) =>
@@ -154,32 +155,44 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
 
                     {isOpen && (
                       <div className="px-4 pb-4 space-y-3 border-t border-[rgba(46,125,107,0.06)]">
-                        {section.params.map(param => (
-                          <div
-                            key={param.name}
-                            className={`rounded-lg p-4 ${param.status === 'critical' ? 'row-critical' : 'bg-bg-base/60'}`}
-                          >
-                            <div className="flex items-start justify-between gap-3 mb-2">
-                              <div className="flex items-center gap-2">
-                                {param.status === 'critical' && (
-                                  <span className="text-status-critical font-bold text-base" aria-label="Critical value">!</span>
-                                )}
-                                <span className="font-body text-base font-medium text-text-primary">{param.name}</span>
+                        {section.params.length === 0 && detailedText ? (
+                          <div 
+                            className="p-4 bg-bg-base/60 rounded-lg font-body text-base text-text-primary leading-[1.7]"
+                            dangerouslySetInnerHTML={{ 
+                              __html: detailedText
+                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                .replace(/\n/g, '<br/>') 
+                            }}
+                          />
+                        ) : (
+                          section.params.map(param => (
+                            <div
+                              key={param.name}
+                              className={`rounded-lg p-4 ${param.status === 'critical' ? 'row-critical' : 'bg-bg-base/60'}`}
+                            >
+                              <div className="flex items-start justify-between gap-3 mb-2">
+                                <div className="flex items-center gap-2">
+                                  {param.status === 'critical' && (
+                                    <span className="text-status-critical font-bold text-base" aria-label="Critical value">!</span>
+                                  )}
+                                  <span className="font-body text-base font-medium text-text-primary">{param.name}</span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className={`font-mono text-base font-semibold
+                                    ${param.status === 'critical' ? 'text-status-critical'
+                                      : param.status === 'warning' ? 'text-status-warning'
+                                      : 'text-text-primary'}`}>
+                                    {param.value} {param.unit}
+                                  </span>
+                                  <StatusBadge status={param.status} />
+                                </div>
                               </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className={`font-mono text-base font-semibold
-                                  ${param.status === 'critical' ? 'text-status-critical'
-                                    : param.status === 'warning' ? 'text-status-warning'
-                                    : 'text-text-primary'}`}>
-                                  {param.value} {param.unit}
-                                </span>
-                                <StatusBadge status={param.status} />
-                              </div>
+                              <p className="font-body text-sm italic text-text-secondary leading-[1.6] mb-1">{param.plain}</p>
+                              <p className="font-body text-sm text-brand-secondary">{param.translation}</p>
                             </div>
-                            <p className="font-body text-sm italic text-text-secondary leading-[1.6] mb-1">{param.plain}</p>
-                            <p className="font-body text-sm text-brand-secondary">{param.translation}</p>
-                          </div>
-                        ))}
+                          ))
+                        )}
                       </div>
                     )}
                   </div>

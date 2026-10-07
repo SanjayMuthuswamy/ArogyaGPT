@@ -384,7 +384,11 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
                        ${mobileTab === 'chat' ? 'hidden md:flex' : 'flex'}`}
         >
           <div className="flex-1 overflow-y-auto scrollbar-thin p-4 md:p-6 lg:p-8">
-            <ReportPanel sections={activeSections} summary={activeSummary} />
+            <ReportPanel 
+              sections={activeSections} 
+              summary={activeSummary}
+              detailedText={reportData?.simplified_text || undefined}
+            />
           </div>
         </div>
 
