@@ -7,6 +7,9 @@ const langCodeMap: Record<string, string> = {
   'Kannada': 'kn-IN',
   'Malayalam': 'ml-IN',
   'Bengali': 'bn-IN',
+  'Marathi': 'mr-IN',
+  'Gujarati': 'gu-IN',
+  'Punjabi': 'pa-IN',
   'English': 'en-IN'
 };
 
@@ -74,7 +77,7 @@ export const useSpeech = () => {
       utterance.voice = voice;
     }
 
-    utterance.rate = 0.88; 
+    utterance.rate = 1.1;
     utterance.pitch = 1.0;
     utterance.volume = 1.0;
 

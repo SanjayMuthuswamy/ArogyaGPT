@@ -20,7 +20,7 @@ import TranslationPage from './pages/TranslationPage'
 import ExportPage from './pages/ExportPage'
 import SettingsPage from './pages/SettingsPage'
 import ErrorStatesPage from './pages/ErrorStatesPage'
-import MedicalLibraryPage from './pages/MedicalLibraryPage'
+
 
 type Page =
   | 'home'
@@ -43,7 +43,6 @@ type Page =
   | 'profile'
   | 'settings'
   | 'errors'
-  | 'library'
 
 type FontSize = 'normal' | 'large' | 'xl'
 
@@ -150,7 +149,7 @@ export default function App() {
       )}
 
       <main>
-        {page === 'home' && <HomePage onNavigate={navigate} />}
+        {page === 'home' && <HomePage onNavigate={navigate} isLoggedIn={isAuthenticated} />}
         {page === 'upload' && <UploadPage onNavigate={navigate} />}
         {page === 'report' && <ReportViewPage onNavigate={navigate} />}
         {page === 'signin' && <SignInPage onNavigate={navigate} onSignIn={handleAuthSuccess} />}

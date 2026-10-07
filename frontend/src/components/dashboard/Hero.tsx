@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react'
 
 interface HeroProps {
   onNavigate: (page: string) => void
+  isLoggedIn?: boolean
 }
 
-export default function Hero({ onNavigate }: HeroProps) {
+export default function Hero({ onNavigate, isLoggedIn }: HeroProps) {
   const heroRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -51,10 +52,10 @@ export default function Hero({ onNavigate }: HeroProps) {
 
             <div className="mb-10 flex flex-wrap items-center gap-4">
               <button
-                onClick={() => onNavigate('dashboard')}
+                onClick={() => onNavigate(isLoggedIn ? 'dashboard' : 'signin')}
                 className="btn-shimmer min-h-[52px] rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] px-8 py-[14px] font-body text-base font-semibold text-white shadow-[0_16px_40px_rgba(29,158,117,0.24)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_45px_rgba(29,158,117,0.32)]"
               >
-                Get Started →
+                {isLoggedIn ? 'Go to Dashboard →' : 'Sign In to Get Started →'}
               </button>
               <button
                 onClick={() => {

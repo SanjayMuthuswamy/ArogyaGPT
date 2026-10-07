@@ -245,6 +245,9 @@ class ChatService:
         if payload.language_code and session.language_code != payload.language_code:
             session.language_code = payload.language_code
 
+        # Commit any pending changes (e.g. session creation) to release DB locks before long LLM call
+        await self.db.commit()
+
         # ---- Call LLM ----
         try:
             answer = await self.llm.answer_question(

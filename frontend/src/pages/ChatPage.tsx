@@ -38,7 +38,7 @@ export default function ChatPage({ onNavigate }: ChatPageProps) {
   const [activeSession, setActiveSession] = useState<string | null>(() => localStorage.getItem('activeReportId'))
   const [searchQuery, setSearchQuery] = useState('')
   const [showInsightPanel, setShowInsightPanel] = useState(true)
-  const [chatLanguage, setChatLanguage] = useState<'ta' | 'en' | 'hi' | 'te' | 'kn' | 'ml' | 'bn'>('ta')
+  const [chatLanguage, setChatLanguage] = useState<'en' | 'ta' | 'hi' | 'te' | 'kn' | 'ml' | 'bn' | 'mr' | 'gu' | 'pa'>('en')
   
   const [reportData, setReportData] = useState<ReportDetail | null>(null)
   const [history, setHistory] = useState<ChatSession[]>([])
@@ -74,7 +74,7 @@ export default function ChatPage({ onNavigate }: ChatPageProps) {
       }
     }).catch(err => console.warn('Failed to fetch history:', err))
     return () => { active = false }
-  }, [])
+  }, [activeSession])
 
   // Fetch active report details
   useEffect(() => {
@@ -101,14 +101,7 @@ export default function ChatPage({ onNavigate }: ChatPageProps) {
 
   useEffect(() => {
     if (activeSession) {
-      setMessages([
-        {
-          id: 'msg1',
-          sender: 'ai',
-          text: 'Hello! I am ArogyaGPT. Ask me any question about your medical reports in Tamil, Hindi, English, or your preferred language.',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ])
+      setMessages([])
     } else {
       setMessages([])
     }
@@ -420,6 +413,26 @@ export default function ChatPage({ onNavigate }: ChatPageProps) {
           )}
 
           <div className="shrink-0 border-t border-gray-200 bg-white px-4 py-3 sm:px-5">
+            {/* Language selector row */}
+            <div className="mx-auto max-w-4xl mb-2 flex items-center gap-2">
+              <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Reply in:</span>
+              <select
+                value={chatLanguage}
+                onChange={e => setChatLanguage(e.target.value as typeof chatLanguage)}
+                className="rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[12px] font-medium text-gray-700 focus:border-[#1D9E75] focus:outline-none cursor-pointer"
+              >
+                <option value="en">English</option>
+                <option value="ta">தமிழ் (Tamil)</option>
+                <option value="hi">हिन्दी (Hindi)</option>
+                <option value="te">తెలుగు (Telugu)</option>
+                <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                <option value="ml">മലയാളം (Malayalam)</option>
+                <option value="bn">বাংলা (Bengali)</option>
+                <option value="mr">मराठी (Marathi)</option>
+                <option value="gu">ગુજરાતી (Gujarati)</option>
+                <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+              </select>
+            </div>
             <div className="relative mx-auto max-w-4xl">
               <button
                 className="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 transition hover:text-[#1D9E75]"

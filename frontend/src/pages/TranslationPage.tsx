@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import AuthenticatedShell from '../components/layout/AuthenticatedShell'
 import { api } from '../services/api'
 
@@ -36,8 +36,11 @@ export default function TranslationPage({ onNavigate }: TranslationPageProps) {
         report_id: reportId,
         target_language: code,
       })
+      const translatedText = typeof result === 'string'
+        ? result
+        : (result as { translated_text?: string } | undefined)?.translated_text ?? `[${language}] Translation complete.`
       const blob = new Blob(
-        [result?.translated_text ?? `[${language}] Translation complete.`],
+        [translatedText],
         { type: 'text/plain;charset=utf-8' }
       )
       const url = URL.createObjectURL(blob)
@@ -47,8 +50,9 @@ export default function TranslationPage({ onNavigate }: TranslationPageProps) {
       a.click()
       URL.revokeObjectURL(url)
       setDone(d => ({ ...d, [code]: true }))
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? 'Translation failed. Please try again.')
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { detail?: string } } }
+      setError(apiError.response?.data?.detail ?? 'Translation failed. Please try again.')
       setTimeout(() => setError(null), 4000)
     } finally {
       setTranslating(null)

@@ -40,11 +40,19 @@ export default function AuthPage({ onNavigate, onLoginSuccess, initialMode = 'si
         }
         onNavigate('dashboard')
       }, 500)
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Auth error:', err)
+      const apiError = err as {
+        response?: {
+          data?: {
+            message?: string
+            detail?: string
+          }
+        }
+      }
       const detail =
-        err.response?.data?.message ||
-        err.response?.data?.detail ||
+        apiError.response?.data?.message ||
+        apiError.response?.data?.detail ||
         'Authentication failed. Please verify your credentials.'
       setErrorMsg(detail)
     } finally {
@@ -208,9 +216,10 @@ export default function AuthPage({ onNavigate, onLoginSuccess, initialMode = 'si
 
               <button
                 type="submit"
-                className="w-full rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] py-3.5 font-semibold text-white shadow-md hover:scale-[1.01] transition"
+                disabled={isLoading}
+                className="w-full rounded-full bg-gradient-to-r from-[#1D9E75] to-[#059669] py-3.5 font-semibold text-white shadow-md hover:scale-[1.01] transition disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {isSignUp ? 'Create Account' : 'Sign In'}
+                {isLoading ? (isSignUp ? 'Creating Account...' : 'Signing In...') : isSignUp ? 'Create Account' : 'Sign In'}
               </button>
 
               {/* Bottom Toggle */}

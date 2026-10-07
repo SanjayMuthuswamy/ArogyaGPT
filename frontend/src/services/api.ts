@@ -253,8 +253,8 @@ export const api = {
     return res.data.data
   },
 
-  async listChatSessions(): Promise<any[]> {
-    const res = await apiClient.get<{ data: any[] }>('/chat/sessions')
+  async listChatSessions(): Promise<Record<string, unknown>[]> {
+    const res = await apiClient.get<{ data: Record<string, unknown>[] }>('/chat/sessions')
     return res.data.data ?? []
   },
 
@@ -263,8 +263,8 @@ export const api = {
     report_id: string
     target_language: string
     text_to_translate?: string
-  }): Promise<any> {
-    const res = await apiClient.post<{ data: any }>('/translation/translate', payload)
+  }): Promise<Record<string, unknown>> {
+    const res = await apiClient.post<{ data: Record<string, unknown> }>('/translation/translate', payload)
     return res.data.data
   },
 

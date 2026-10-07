@@ -46,8 +46,9 @@ export default function VoiceSummaryPage({ onNavigate }: VoiceSummaryPageProps) 
       } else {
         setError('Voice generated but no audio URL returned. Backend may need TTS configured.')
       }
-    } catch (e: any) {
-      setError(e?.response?.data?.detail ?? 'Voice generation failed. Please try again.')
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { detail?: string } } }
+      setError(apiError.response?.data?.detail ?? 'Voice generation failed. Please try again.')
       setTimeout(() => setError(null), 5000)
     } finally {
       setIsGenerating(false)

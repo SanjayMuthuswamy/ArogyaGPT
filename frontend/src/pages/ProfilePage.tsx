@@ -7,7 +7,7 @@ interface ProfilePageProps {
 
 export default function ProfilePage({ onNavigate }: ProfilePageProps) {
   const [name, setName] = useState('Alex Sundaram')
-  const [email, setEmail] = useState('alex.sundaram@medsimplify.ai')
+  const [email] = useState('alex.sundaram@medsimplify.ai')
   const [editing, setEditing] = useState(false)
   const [tempName, setTempName] = useState(name)
 // Removed tempEmail state – email is not editable

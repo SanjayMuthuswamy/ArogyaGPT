@@ -87,9 +87,9 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
           } else if (statusCheck.status === 'failed') {
             throw new Error('AI analysis failed to extract readable laboratory data from this file.')
           }
-        } catch (e: any) {
-          if (e.message && e.message.includes('AI analysis failed')) {
-            throw e
+        } catch (error: unknown) {
+          if (error instanceof Error && error.message.includes('AI analysis failed')) {
+            throw error
           }
           // Report may still be processing, keep polling
         }
@@ -101,11 +101,23 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
 
       setProcessStep(PROCESSING_STEPS.length - 1)
       window.setTimeout(() => onNavigate('report'), 500)
-    } catch (err: any) {
-      console.error('Upload failed:', err)
+    } catch (error: unknown) {
+      console.error('Upload failed:', error)
+      const apiError = error as {
+        response?: {
+          data?: {
+            message?: string
+            detail?: string
+          }
+        }
+        message?: string
+      }
       setProcessing(false)
       setUploadError(
-        err.response?.data?.message || err.response?.data?.detail || err.message || 'Failed to upload and process report.'
+        apiError.response?.data?.message ||
+          apiError.response?.data?.detail ||
+          apiError.message ||
+          'Failed to upload and process report.'
       )
     }
   }

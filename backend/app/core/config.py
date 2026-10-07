@@ -140,7 +140,7 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = "noreply@arogyagpt.com"
     SMTP_TLS: bool = True
-    EMAIL_ENABLED: bool = False
+    EMAIL_ENABLED: bool = True
 
     # --- Logging ---
     LOG_LEVEL: str = "INFO"

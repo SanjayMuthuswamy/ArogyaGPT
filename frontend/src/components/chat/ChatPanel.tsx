@@ -16,7 +16,7 @@ export interface LanguageOption {
   native: string
 }
 
-export const SUPPORTED_LANGUAGES: LanguageOption[] = [
+const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: 'ta', name: 'Tamil', native: 'தமிழ்' },
   { code: 'en', name: 'English', native: 'English' },
   { code: 'hi', name: 'Hindi', native: 'हिन्दी' },
@@ -99,7 +99,7 @@ export default function ChatPanel({ selectedLanguage, onLanguageChange }: ChatPa
         setCurrentLang(match)
       }
     }
-  }, [selectedLanguage])
+  }, [selectedLanguage, currentLang.code])
 
   const handleLanguageSelect = (code: string) => {
     const match = SUPPORTED_LANGUAGES.find(l => l.code === code) || SUPPORTED_LANGUAGES[0]

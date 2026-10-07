@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import ReportPanel, { Section, Parameter, Insight } from '../components/report/ReportPanel'
+import ReportPanel, { Section, Parameter } from '../components/report/ReportPanel'
 import ChatPanel from '../components/chat/ChatPanel'
 import PdfExportContent from '../components/report/PdfExportContent'
 import { useSpeech } from '../hooks/useSpeech'
 import { api, ReportDetail } from '../services/api'
 
-// @ts-ignore — html2pdf has no official TS types
 import html2pdf from 'html2pdf.js'
 
 interface ReportViewPageProps {
