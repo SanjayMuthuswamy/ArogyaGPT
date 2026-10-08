@@ -53,35 +53,71 @@ ArogyaGPT helps Indian patients understand their medical reports in their native
 - Node.js 18+
 - A [Groq API key](https://console.groq.com/)
 
-### Backend
+### Run locally without Docker
+
+The backend and frontend run as separate development servers. The commands
+below use Windows PowerShell; run each server in its own terminal.
+
+#### Backend
+
+```powershell
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+```
+
+Edit `backend/.env` before starting the server. For a local setup without
+PostgreSQL, set `DATABASE_URL=sqlite+aiosqlite:///./arogyagpt.db`. Set
+`GROQ_API_KEY` to enable AI-powered features. Redis is optional; if it is not
+running, the API starts without caching.
+
+```powershell
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+The API is available at [http://127.0.0.1:8000](http://127.0.0.1:8000);
+check [http://127.0.0.1:8000/health/live](http://127.0.0.1:8000/health/live)
+for its liveness status.
+
+#### Frontend
+
+In a second terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev -- --host 127.0.0.1
+```
+
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173). Vite proxies `/api`
+requests to the local backend on port 8000.
+
+#### Linux/macOS
 
 ```bash
 cd backend
-python -m venv venv
-# Windows:
-.\venv\Scripts\activate
-# Linux/macOS:
+python3 -m venv venv
 source venv/bin/activate
-
 pip install -r requirements.txt
-
-# Copy and fill in your .env
 cp .env.example .env
-
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# Set DATABASE_URL=sqlite+aiosqlite:///./arogyagpt.db in backend/.env
+uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### Frontend
+In a second terminal:
 
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev -- --host 127.0.0.1
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
-
 ### Production with Docker Compose
+
+Docker Compose is only needed for the production-style multi-service
+deployment described below; it is not required for local development.
 
 The Compose deployment serves the production Vite build with Nginx, proxies API
 requests to FastAPI, starts PostgreSQL and Redis, and applies Alembic migrations
