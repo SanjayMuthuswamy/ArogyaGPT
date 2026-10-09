@@ -61,7 +61,7 @@ export default function AuthPage({ onNavigate, onLoginSuccess, initialMode = 'si
   }
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4 sm:p-6 md:p-10 pt-20">
+    <div className={`min-h-screen bg-[#FAFAF8] flex items-center justify-center p-4 sm:p-6 md:p-10 ${initialMode === 'signup' ? 'pt-20' : 'pt-4'}`}>
       <div className="w-full max-w-5xl rounded-[32px] border border-[#E3F1EB] bg-white shadow-[0_24px_64px_rgba(24,50,45,0.08)] overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[620px]">
         
         {/* Left Side: Medical AI Illustration & Branding Banner */}

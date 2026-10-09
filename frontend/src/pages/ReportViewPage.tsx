@@ -116,7 +116,7 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
   }, [isProcessing])
 
   // ── Voice ──────────────────────────────────────────────────────────────
-  const { speak, pause, resume, stop, isSpeaking, isPaused, progress } = useSpeech()
+  const { speak, pause, resume, stop, isSpeaking, isPaused, progress, speechError } = useSpeech()
   const pressTimer = useRef<number | null>(null)
 
   const handleVoiceClick = () => {
@@ -154,36 +154,56 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
     setDownloadState('generating')
     setDownloadError(false)
     const element = document.getElementById('pdf-export-content')
-    if (!element) { setDownloadState('idle'); return }
-
-    element.style.visibility = 'visible'
+    if (!element) {
+      setDownloadError(true)
+      setDownloadState('idle')
+      setTimeout(() => setDownloadError(false), 4000)
+      return
+    }
 
     const date = new Date().toISOString().slice(0, 10)
     const cleanFilename = activeTitle.replace(/[^a-zA-Z0-9_-]/g, '_')
+    const captureElement = element.cloneNode(true) as HTMLElement
+    captureElement.id = 'pdf-export-capture'
+    Object.assign(captureElement.style, {
+      position: 'fixed',
+      left: '0',
+      top: '0',
+      visibility: 'visible',
+      zIndex: '-1',
+      pointerEvents: 'none',
+    })
+    document.body.appendChild(captureElement)
+
     const options = {
       margin:      [12, 10, 12, 10] as [number, number, number, number],
       filename:    `ArogyaGPT-${cleanFilename}-${date}.pdf`,
       image:       { type: 'jpeg' as const, quality: 0.95 },
       html2canvas: { scale: 2, useCORS: true, backgroundColor: '#FDFCFA' },
       jsPDF:       { unit: 'mm' as const, format: 'a4', orientation: 'portrait' as const },
-      pagebreak:   { mode: 'avoid-all', before: '.pdf-section' },
+      // Let long reports paginate naturally.  `avoid-all` can force a blank
+      // first page when a section is taller than one A4 page.
+      pagebreak:   { mode: ['css', 'legacy'], avoid: '.pdf-section' },
     }
 
     try {
-      await html2pdf().set(options).from(element).save()
+      await document.fonts.ready
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+      await html2pdf().set(options).from(captureElement).save()
       setDownloadState('done')
       setTimeout(() => setDownloadState('idle'), 2000)
-    } catch {
+    } catch (error) {
+      console.error('PDF report generation failed:', error)
       setDownloadError(true)
       setDownloadState('idle')
       setTimeout(() => setDownloadError(false), 4000)
     } finally {
-      element.style.visibility = 'hidden'
+      captureElement.remove()
     }
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-bg-base">
+    <div className="flex h-screen h-[100dvh] flex-col overflow-hidden bg-bg-base">
 
       {/* Hidden PDF export — rendered off-screen, always light */}
       <PdfExportContent
@@ -199,12 +219,15 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
       {/* Top bar */}
       <div
         className="sticky top-0 z-40 bg-bg-surface border-b border-[rgba(46,125,107,0.1)]"
-        style={{ paddingTop: '64px' }}
       >
         <div className="max-w-screen-2xl mx-auto px-4 md:px-6 flex items-center justify-between h-14 md:h-16 gap-4">
           {/* Back + filename */}
           <button
-            onClick={() => onNavigate('upload')}
+            onClick={() => {
+              if (window.confirm('Leave this report and return to upload? Your chat on this page will be cleared.')) {
+                onNavigate('upload')
+              }
+            }}
             className="flex items-center gap-2 text-text-secondary hover:text-text-primary
                        transition-colors duration-fast min-h-[44px] flex-shrink-0"
             aria-label="Go back to upload"
@@ -334,7 +357,7 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
               {downloadState !== 'idle' && (
                 <span className={`absolute top-1/2 -translate-y-1/2 right-[44px] whitespace-nowrap text-[11px] pointer-events-none
                   ${downloadState === 'generating' ? 'text-text-muted' : 'text-status-normal'}`}>
-                  {downloadState === 'generating' ? 'Preparing PDF...' : 'Downloaded!'}
+                  {downloadState === 'generating' ? 'Preparing PDF...' : ''}
                 </span>
               )}
 
@@ -374,17 +397,22 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
           Download failed. Please try again.
         </div>
       )}
+      {speechError && (
+        <div role="alert" className="text-center py-1 font-body text-[11px] text-status-critical bg-status-critical/5">
+          {speechError}
+        </div>
+      )}
 
       {/* Two-panel layout */}
-      <div className="flex-1 flex overflow-hidden max-w-screen-2xl mx-auto w-full">
+      <div className="flex min-h-0 flex-1 overflow-hidden max-w-screen-2xl mx-auto w-full pb-14 md:pb-0">
 
         {/* Left — Report (58%) */}
         <div
-          className={`flex-[58] min-w-0 border-r border-[rgba(46,125,107,0.1)]
+          className={`flex-[58] min-h-0 min-w-0 border-r border-[rgba(46,125,107,0.1)]
                        overflow-hidden flex flex-col
                        ${mobileTab === 'chat' ? 'hidden md:flex' : 'flex'}`}
         >
-          <div className="flex-1 overflow-y-auto scrollbar-thin p-4 md:p-6 lg:p-8">
+          <div className="min-h-0 flex-1 overflow-y-auto scrollbar-thin p-4 md:p-6 lg:p-8">
             <ReportPanel
               sections={activeSections}
               summary={activeSummary}
@@ -398,10 +426,10 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
 
         {/* Right — Chat (42%) */}
         <div
-          className={`flex-[42] min-w-0 overflow-hidden flex flex-col bg-bg-base
+          className={`flex-[42] min-h-0 min-w-0 overflow-hidden flex flex-col bg-bg-base
                        ${mobileTab === 'report' ? 'hidden md:flex' : 'flex'}`}
         >
-          <div className="flex-1 overflow-hidden flex flex-col p-4 md:p-6">
+          <div className="min-h-0 flex-1 overflow-hidden flex flex-col p-4 md:p-6">
             <ChatPanel selectedLanguage={language} onLanguageChange={setLanguage} />
           </div>
         </div>

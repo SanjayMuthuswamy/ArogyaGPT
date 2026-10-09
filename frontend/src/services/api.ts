@@ -239,11 +239,12 @@ export const api = {
   },
 
   async explainReportTerm(
-    reportId: string,
+    reportId: string | undefined,
     term: string,
     languageCode: string
   ): Promise<string> {
-    const res = await apiClient.post<{ data: string }>(`/reports/${reportId}/explain`, {
+    const id = reportId || 'general'
+    const res = await apiClient.post<{ data: string }>(`/reports/${id}/explain`, {
       term,
       language_code: languageCode,
     })
@@ -294,5 +295,11 @@ export const api = {
     const res = await apiClient.post<{ data: { id: string; audio_file_url?: string } }>('/voice/generate', payload)
     return res.data.data
   },
-}
 
+  async downloadVoiceAudio(id: string): Promise<Blob> {
+    const res = await apiClient.get<Blob>(`/voice/${id}/download`, {
+      responseType: 'blob',
+    })
+    return res.data
+  },
+}

@@ -148,17 +148,6 @@ export default function AuthenticatedShell({
 
         {/* Sidebar footer */}
         <div className="px-3 pb-5 space-y-2 border-t border-[#E3F1EB] pt-4">
-          <div className="rounded-2xl border border-[#E3F1EB] bg-[#F7FCF9] p-3 text-xs text-[#4A5E59]">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#1D9E75] opacity-60" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#1D9E75]" />
-              </span>
-              <p className="font-bold text-[#18322D]">AI Security Active</p>
-            </div>
-            <p className="leading-relaxed">256-bit encrypted health workspace.</p>
-          </div>
-
           <button
             onClick={() => onNavigate('logout')}
             className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left font-body text-xs font-semibold text-[#C23B3B] hover:bg-[#FFF5F5] transition-colors duration-200"
