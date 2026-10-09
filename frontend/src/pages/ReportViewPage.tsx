@@ -390,6 +390,8 @@ export default function ReportViewPage({ onNavigate }: ReportViewPageProps) {
               summary={activeSummary}
               detailedText={reportData?.simplified_text || undefined}
               insights={activeInsights}
+              reportId={reportData?.id}
+              language={language}
             />
           </div>
         </div>

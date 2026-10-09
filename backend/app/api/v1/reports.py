@@ -30,8 +30,10 @@ from app.schemas.report import (
     ReportSummaryResponse,
     ReportUploadMetadata,
     CameraUploadRequest,
+    MedicalTermExplanationRequest,
 )
 from app.core.logging import get_logger
+from app.services.llm_service import LLMService
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
@@ -436,8 +438,43 @@ async def get_report(
 
 
 # ==============================================================================
-# DELETE /api/v1/reports/{report_id}
+# POST /api/v1/reports/{report_id}/explain
 # ==============================================================================
+
+@router.post(
+    "/{report_id}/explain",
+    response_model=SuccessResponse[str],
+    status_code=status.HTTP_200_OK,
+    summary="Explain a medical term from a report",
+    description="Generate a short explanation in the selected language using Groq.",
+)
+async def explain_report_term(
+    report_id: str,
+    payload: MedicalTermExplanationRequest,
+    current_user: VerifiedUser,
+    db: DBSession,
+) -> SuccessResponse[str]:
+    result = await db.execute(
+        select(Report.id).where(
+            Report.id == report_id,
+            Report.user_id == current_user.id,
+            Report.is_deleted == False,
+        )
+    )
+    if result.scalar_one_or_none() is None:
+        raise ReportNotFoundError(identifier=report_id)
+
+    explanation = await LLMService().explain_medical_term(
+        term=payload.term,
+        language=payload.language_code,
+    )
+    return SuccessResponse(
+        message="Medical term explanation generated successfully.",
+        data=explanation,
+    )
+
+
+# DELETE /api/v1/reports/{report_id}
 
 @router.delete(
     "/{report_id}",

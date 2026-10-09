@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { api } from '../../services/api'
 
 type Status = 'normal' | 'warning' | 'critical'
 
@@ -33,6 +34,8 @@ interface ReportPanelProps {
   summary?: string
   detailedText?: string
   insights?: Insight[]
+  reportId?: string
+  language?: string
 }
 
 const StatusBadge = ({ status }: { status: Status }) => {
@@ -66,7 +69,14 @@ const RangeBar = ({ min, max, value }: { min: number; max: number; value: number
 
 type ReportTab = 'simplified' | 'values' | 'insights'
 
-export default function ReportPanel({ sections: propSections, summary: propSummary, detailedText, insights: propInsights = [] }: ReportPanelProps = {}) {
+export default function ReportPanel({
+  sections: propSections,
+  summary: propSummary,
+  detailedText,
+  insights: propInsights = [],
+  reportId,
+  language = 'English',
+}: ReportPanelProps = {}) {
   const activeData = propSections && propSections.length > 0 ? propSections : REPORT_DATA
   const activeSummary = propSummary || 'Your medical report has been processed by ArogyaGPT. Please review your laboratory findings and clinical parameters.'
 
@@ -169,14 +179,37 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
                       <div className="px-4 pb-4 space-y-3 border-t border-[rgba(46,125,107,0.06)]">
                         {section.params.length === 0 && detailedText ? (
                           <div
-                            className="p-4 bg-bg-base/60 rounded-lg font-body text-base text-text-primary leading-[1.7]"
-                            dangerouslySetInnerHTML={{
-                              __html: detailedText
-                                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                .replace(/\n/g, '<br/>')
-                            }}
-                          />
+                            className="space-y-1 p-4 bg-bg-base/60 rounded-lg font-body text-base text-text-primary leading-[1.7]"
+                          >
+                            {detailedText.split('\n').map((line, index) => {
+                              const term = line
+                                .replace(/<[^>]*>/g, '')
+                                .replace(/[*_#`>-]/g, '')
+                                .trim()
+                              if (!line.trim()) {
+                                return <div key={`line-${index}`} className="h-2" />
+                              }
+                              return (
+                                <div key={`line-${index}`} className="flex items-start gap-2">
+                                  <span
+                                    className="min-w-0 flex-1"
+                                    dangerouslySetInnerHTML={{
+                                      __html: line
+                                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                        .replace(/\*(.*?)\*/g, '<em>$1</em>'),
+                                    }}
+                                  />
+                                  {reportId && term.length > 0 && term.length <= 300 && (
+                                    <TermInfoButton
+                                      reportId={reportId}
+                                      term={term}
+                                      language={language}
+                                    />
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
                         ) : (
                           section.params.map(param => (
                             <div
@@ -189,6 +222,9 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
                                     <span className="text-status-critical font-bold text-base" aria-label="Critical value">!</span>
                                   )}
                                   <span className="font-body text-base font-medium text-text-primary">{param.name}</span>
+                                  {reportId && (
+                                    <TermInfoButton reportId={reportId} term={param.name} language={language} />
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                   <span className={`font-mono text-base font-semibold
@@ -297,6 +333,8 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
                   icon={insight.icon}
                   title={insight.title}
                   body={insight.body}
+                  reportId={reportId}
+                  language={language}
                   sections={[
                     { q: 'Clinical Significance', a: insight.body },
                     { q: 'Recommended Action', a: 'Discuss this finding with your physician for clinical evaluation and treatment guidance.' },
@@ -311,15 +349,20 @@ export default function ReportPanel({ sections: propSections, summary: propSumma
   )
 }
 
-function InsightCard({ icon, title, body, sections }: {
+function InsightCard({ icon, title, body, sections, reportId, language }: {
   icon: string; title: string; body: string
   sections: { q: string; a: string }[]
+  reportId?: string
+  language: string
 }) {
   const [open, setOpen] = useState<number | null>(null)
   return (
     <div className="bg-bg-surface rounded-lg shadow-card border border-[rgba(46,125,107,0.08)] p-6 card-hover">
       <div className="text-4xl mb-4" aria-hidden="true">{icon}</div>
-      <h3 className="font-display text-xl font-medium text-text-primary mb-3 tracking-[-0.01em]">{title}</h3>
+      <div className="flex items-start gap-2 mb-3">
+        <h3 className="font-display text-xl font-medium text-text-primary tracking-[-0.01em]">{title}</h3>
+        {reportId && <TermInfoButton reportId={reportId} term={title} language={language} />}
+      </div>
       <p
         className="font-body text-md text-text-secondary leading-[1.7] mb-5"
         dangerouslySetInnerHTML={{
@@ -351,5 +394,84 @@ function InsightCard({ icon, title, body, sections }: {
         ))}
       </div>
     </div>
+  )
+}
+
+const LANGUAGE_CODES: Record<string, string> = {
+  tamil: 'ta',
+  english: 'en',
+  hindi: 'hi',
+  telugu: 'te',
+  kannada: 'kn',
+  malayalam: 'ml',
+  bengali: 'bn',
+  marathi: 'mr',
+  gujarati: 'gu',
+}
+
+function TermInfoButton({
+  reportId,
+  term,
+  language,
+}: {
+  reportId: string
+  term: string
+  language: string
+}) {
+  const [open, setOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [explanation, setExplanation] = useState('')
+  const [error, setError] = useState('')
+
+  const handleClick = async () => {
+    if (open) {
+      setOpen(false)
+      return
+    }
+    setOpen(true)
+    if (explanation || loading) return
+
+    setLoading(true)
+    setError('')
+    try {
+      const response = await api.explainReportTerm(
+        reportId,
+        term,
+        LANGUAGE_CODES[language.toLowerCase()] || 'en'
+      )
+      setExplanation(response)
+    } catch {
+      setError('Could not load the explanation. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <span className="relative inline-flex flex-shrink-0">
+      <button
+        type="button"
+        onClick={handleClick}
+        aria-label={`Explain ${term} in ${language}`}
+        aria-expanded={open}
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-brand-primary/30 text-xs font-semibold text-brand-secondary hover:bg-brand-primary/10 focus:outline-none focus:ring-2 focus:ring-brand-primary/40"
+        title={`Explain in ${language}`}
+      >
+        i
+      </button>
+      {open && (
+        <span
+          role="status"
+          className="absolute left-0 top-full z-30 mt-2 w-64 rounded-lg border border-brand-primary/15 bg-bg-surface p-3 text-left font-body text-sm leading-6 text-text-secondary shadow-elevated"
+        >
+          {loading ? 'Generating explanation…' : error || explanation}
+          {explanation && (
+            <span className="mt-2 block text-xs text-text-muted">
+              For general understanding only. Please discuss the report with your clinician.
+            </span>
+          )}
+        </span>
+      )}
+    </span>
   )
 }
