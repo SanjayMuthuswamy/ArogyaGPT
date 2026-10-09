@@ -240,6 +240,48 @@ Please consult your doctor for personalized medical advice."""
             logger.error(f"LLM summary generation failed: {e}")
             return "Summary unavailable."
 
+    async def explain_medical_term(self, term: str, language: str = "en") -> str:
+        """Explain a medical report term in the patient's selected language."""
+        target_lang = LANGUAGE_MAP.get(language.strip().lower(), language)
+        if not settings.GROQ_API_KEY:
+            raise LLMServiceError("GROQ_API_KEY is not configured.")
+
+        prompt = f"""Explain this medical report finding or term in simple language for a patient:
+
+{term}
+
+Give a brief, factual explanation of what the term generally describes. Do not infer
+the patient's diagnosis or health status from the term alone, and do not recommend
+medicines or treatment. State that a clinician should interpret it in the context
+of the full report. Write the entire explanation in {target_lang}, using its
+appropriate script. Do not begin with a greeting.
+
+Explanation:"""
+
+        try:
+            result = await self._generate(
+                prompt,
+                max_tokens=350,
+                temperature=0.1,
+            )
+            language_code = language.strip().lower()
+            if _needs_script_translation(result, language_code):
+                from app.services.translation_service import TranslationService
+
+                result = await TranslationService().translate(
+                    text=result,
+                    target_lang=language_code,
+                    source_lang="auto",
+                )
+                if _needs_script_translation(result, language_code):
+                    raise LLMServiceError(
+                        f"The explanation could not be generated in {target_lang}."
+                    )
+            return result
+        except Exception as e:
+            logger.error(f"Medical term explanation failed: {e}")
+            raise LLMServiceError(f"Medical term explanation failed: {str(e)}")
+
     async def answer_question(
         self,
         question: str,

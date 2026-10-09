@@ -55,6 +55,13 @@ class CameraUploadRequest(BaseSchema):
 # Report State
 # ==============================================================================
 
+class MedicalTermExplanationRequest(BaseSchema):
+    """Request for a patient-friendly explanation of a report finding."""
+
+    term: str = Field(..., min_length=1, max_length=300)
+    language_code: str = Field(default="en", min_length=2, max_length=10)
+
+
 class ReportFileResponse(BaseSchema):
     """File metadata returned in report responses."""
 

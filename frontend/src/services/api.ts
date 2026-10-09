@@ -238,6 +238,18 @@ export const api = {
     return res.data.data
   },
 
+  async explainReportTerm(
+    reportId: string,
+    term: string,
+    languageCode: string
+  ): Promise<string> {
+    const res = await apiClient.post<{ data: string }>(`/reports/${reportId}/explain`, {
+      term,
+      language_code: languageCode,
+    })
+    return res.data.data
+  },
+
   async deleteReport(id: string): Promise<void> {
     await apiClient.delete(`/reports/${id}`)
   },
